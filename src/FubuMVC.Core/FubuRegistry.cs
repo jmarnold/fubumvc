@@ -34,6 +34,9 @@ namespace FubuMVC.Core
         private readonly ViewAttacher _viewAttacher;
         private IConfigurationObserver _observer;
 
+
+
+
         public FubuRegistry()
         {
             _observer = new NulloConfigurationObserver();
@@ -65,6 +68,8 @@ namespace FubuMVC.Core
             _conventions.Add(_viewAttacher);
             Policies.Add<JsonMessageInputConvention>();
             Policies.Add<UrlRegistryCategoryConvention>();
+
+            _urlConventions.Add(new UrlForNewConvention());
         }
 
         public FubuRegistry(Action<FubuRegistry> configure)
@@ -110,5 +115,10 @@ namespace FubuMVC.Core
             var builder = new UrlRegistryBuilder(_urls);
             graph.VisitRoutes(builder);
         }
+    }
+
+    public interface IFubuRegistryExtension
+    {
+        void Configure(FubuRegistry registry);
     }
 }

@@ -20,6 +20,11 @@ namespace FubuMVC.Core
             _topRegistry = topRegistry;
         }
 
+        protected virtual IEnumerable<IFubuRegistryExtension> findExtensions()
+        {
+            return new IFubuRegistryExtension[0];
+        }
+
         public void Bootstrap(ICollection<RouteBase> routes)
         {
             if (HttpContext.Current != null)
@@ -27,10 +32,20 @@ namespace FubuMVC.Core
                 UrlContext.Live();
             }
 
+            // Find all of the IFubuRegistryExtension's and apply
+            // them to the top level FubuRegistry *BEFORE*
+            // registering the Fubu application parts into
+            // your IoC container
+            findExtensions().Each(x => x.Configure(_topRegistry));
 
+            // "Bake" the fubu configuration model into your
+            // IoC container for the application
             BehaviorGraph graph = _topRegistry.BuildGraph();
             graph.EachService(_facility.Register);
             IBehaviorFactory factory = _facility.BuildFactory();
+
+            // Register all the Route objects into the routes 
+            // collection
 
             // TODO -- need a way to do this with debugging
             graph.VisitRoutes(x =>
