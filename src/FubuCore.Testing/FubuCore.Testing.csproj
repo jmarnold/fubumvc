@@ -1,5 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="3.5" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -72,7 +72,6 @@
     <Compile Include="Binding\ASPNetObjectConversionFamilyTester.cs" />
     <Compile Include="Binding\BasicTypeConverterTester.cs" />
     <Compile Include="Binding\BindingResultTester.cs" />
-    <Compile Include="Binding\ConverterExpressionTester.cs" />
     <Compile Include="Binding\ConvertProblemTester.cs" />
     <Compile Include="Binding\FlatFileRequestDataTester.cs" />
     <Compile Include="Binding\InMemoryRequestDataTester.cs" />
