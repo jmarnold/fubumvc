@@ -26,7 +26,7 @@ namespace FubuMVC.Tests.UI.Forms
             var page = MockRepository.GenerateMock<IFubuPage<ViewModel>>();
             page.Stub(x => x.Model).Return(_pageViewModel);
             page.Stub(x => x.ElementPrefix).Return("prefix");
-            page.Stub(x => x.Get<TagGenerator<ViewModel>>()).Return(new TagGenerator<ViewModel>(new TagProfileLibrary(), null, null, null));
+            page.Stub(x => x.Get<ITagGenerator<ViewModel>>()).Return(new TagGenerator<ViewModel>(new TagProfileLibrary(), null, null));
 
             _generator = page.Tags();
         }
@@ -58,7 +58,7 @@ namespace FubuMVC.Tests.UI.Forms
             fubuRequest.Stub(x => x.Get<InputModel>()).Return(_modelFromFubuRequest);
             page.Stub(x => x.Get<IFubuRequest>()).Return(fubuRequest);
             page.Stub(x => x.ElementPrefix).Return("prefix");
-            page.Stub(x => x.Get<TagGenerator<InputModel>>()).Return(new TagGenerator<InputModel>(new TagProfileLibrary(), null, null, null));
+            page.Stub(x => x.Get<ITagGenerator<InputModel>>()).Return(new TagGenerator<InputModel>(new TagProfileLibrary(), null, null));
 
             _generator = page.Tags<InputModel>();
         }
@@ -87,7 +87,7 @@ namespace FubuMVC.Tests.UI.Forms
         {
             var page = MockRepository.GenerateMock<IFubuPage<ViewModel>>();
             page.Stub(x => x.ElementPrefix).Return("prefix");
-            page.Stub(x => x.Get<TagGenerator<InputModel>>()).Return(new TagGenerator<InputModel>(new TagProfileLibrary(), null, null, null));
+            page.Stub(x => x.Get<ITagGenerator<InputModel>>()).Return(new TagGenerator<InputModel>(new TagProfileLibrary(), null, null));
 
             _generator = page.Tags(_givenInstance);
         }
@@ -170,13 +170,18 @@ namespace FubuMVC.Tests.UI.Forms
             var serviceLocator = MockRepository.GenerateStub<IServiceLocator>();
             var namingConvention = MockRepository.GenerateStub<IElementNamingConvention>();
             _tags = new TagGenerator<InputModel>(new TagProfileLibrary(), namingConvention,
-                serviceLocator, new Stringifier());
+                serviceLocator);
             
             _viewTypeRegistry = MockRepository.GenerateStub<IPartialViewTypeRegistry>();
             serviceLocator.Stub(s => s.GetInstance<IPartialViewTypeRegistry>()).Return(_viewTypeRegistry);
+
+            var inMemoryFubuRequest = new InMemoryFubuRequest();
+            inMemoryFubuRequest.Set(new InputModel());
+
+            _page.Stub(s => s.Get<IFubuRequest>()).Return(inMemoryFubuRequest);
             
             _model = new InputModel{Partials=new List<PartialModel>{new PartialModel()}};
-            _page.Expect(p => p.Get<TagGenerator<InputModel>>()).Return(_tags);
+            _page.Expect(p => p.Get<ITagGenerator<InputModel>>()).Return(_tags);
             _page.Expect(p => p.Model).Return(_model);
             _page.Expect(p => p.Get<IPartialRenderer>()).Return(_renderer);
             _page.Expect(p => p.ServiceLocator).Return(serviceLocator);

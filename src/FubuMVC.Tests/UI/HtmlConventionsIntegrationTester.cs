@@ -7,6 +7,7 @@ using FubuMVC.StructureMap;
 using FubuMVC.UI;
 using FubuMVC.UI.Configuration;
 using FubuMVC.UI.Forms;
+using FubuMVC.UI.Security;
 using FubuMVC.UI.Tags;
 using HtmlTags;
 using NUnit.Framework;
@@ -147,10 +148,9 @@ namespace FubuMVC.Tests.UI
         }
 
         [Test]
-        public void by_default_the_html_conventions_should_use_the_definition_label_and_field_layout()
+        public void should_register_the_field_access_service()
         {
-            container.GetInstance<ILabelAndFieldLayout>()
-                .ShouldBeOfType<DefinitionListLabelAndField>();
+            container.GetInstance<IFieldAccessService>().ShouldBeOfType<FieldAccessService>();
         }
 
         [Test]
@@ -170,6 +170,12 @@ namespace FubuMVC.Tests.UI
         {
             generator.InputFor(x => x.City).Attr("name").ShouldEqual("City");
             generator.InputFor(x => x.IsActive).Attr("name").ShouldEqual("IsActive");
+        }
+
+        [Test]
+        public void get_the_field_and_label_layout()
+        {
+            generator.NewFieldLayout().ShouldBeOfType<DefinitionListLabelAndField>();
         }
     }
 }

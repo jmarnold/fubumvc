@@ -1,20 +1,38 @@
 using System;
+using System.Linq.Expressions;
+using System.Reflection;
 using FubuCore;
 using FubuCore.Reflection;
+using FubuMVC.UI.Security;
+using FubuMVC.UI.Tags;
 using Microsoft.Practices.ServiceLocation;
+using FubuMVC.UI;
 
 namespace FubuMVC.UI.Configuration
 {
     public class ElementRequest
     {
-        private readonly Stringifier _stringifier;
         private bool _hasFetched;
         private object _rawValue;
         private readonly IServiceLocator _services;
 
-        public ElementRequest(object model, Accessor accessor, IServiceLocator services, Stringifier stringifier)
+        public static ElementRequest For(object model, PropertyInfo property)
         {
-            _stringifier = stringifier;
+            return new ElementRequest(model, new SingleProperty(property), null);
+        }
+
+        public static ElementRequest For<T>(T model, Expression<Func<T, object>> expression)
+        {
+            return new ElementRequest(model, expression.ToAccessor(), null);
+        }
+
+        public static ElementRequest For<T>(T model, Expression<Func<T, object>> expression, IServiceLocator services)
+        {
+            return new ElementRequest(model, expression.ToAccessor(), services);
+        }
+
+        public ElementRequest(object model, Accessor accessor, IServiceLocator services)
+        {
             Model = model;
             Accessor = accessor;
             _services = services;
@@ -45,13 +63,31 @@ namespace FubuMVC.UI.Configuration
             return new AccessorDef
             {
                 Accessor = Accessor,
-                ModelType = Model.GetType()
+                ModelType = HolderType()
             };
+        }
+
+        
+        public Type HolderType()
+        {
+            if (Model == null)
+            {
+                return Accessor.DeclaringType;
+            }
+
+            var resolver = _services == null ? new TypeResolver() : Get<ITypeResolver>();
+
+            return Model == null ? null : resolver.ResolveType(Model);
         }
 
         public T Get<T>()
         {
             return _services.GetInstance<T>();
+        }
+
+        public virtual ITagGenerator Tags()
+        {
+            return _services.TagsFor(Model);
         }
 
         public T Value<T>()
@@ -63,7 +99,7 @@ namespace FubuMVC.UI.Configuration
         public string StringValue()
         {
             var request = new GetStringRequest(Accessor, RawValue, _services);
-            return _stringifier.GetString(request);
+            return Get<Stringifier>().GetString(request);
         }
 
         public bool ValueIsEmpty()
@@ -76,6 +112,11 @@ namespace FubuMVC.UI.Configuration
             if (ValueIsEmpty()) return;
 
             action((T) RawValue);
+        }
+
+        public virtual AccessRight AccessRights()
+        {
+            return Get<IFieldAccessService>().RightsFor(this);
         }
     }
 }

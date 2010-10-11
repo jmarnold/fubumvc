@@ -2,6 +2,7 @@ using System;
 using System.Reflection;
 using FubuCore.Reflection;
 using NUnit.Framework;
+using FubuCore.Testing;
 
 namespace FubuCore.Testing
 {
@@ -72,6 +73,41 @@ namespace FubuCore.Testing
             MethodInfo method = ReflectionHelper.GetMethod<AttributeClass>(x => x.GetName());
             method.HasAttribute<DescriptionAttribute>().ShouldBeTrue();
             method.HasAttribute<SetUpAttribute>().ShouldBeFalse();
+        }
+
+        [Test]
+        public void has_attribute_on_property()
+        {
+            var property = ReflectionHelper.GetProperty<BaseAttributeClass>(x => x.OnBase);
+            property.HasAttribute<FakeAttribute>().ShouldBeTrue();
+        }
+
+        [Test]
+        public void has_attribute_on_property_from_base_class()
+        {
+            var property = ReflectionHelper.GetProperty<DerivedAttributeClass>(x => x.OnBase);
+            property.HasAttribute<FakeAttribute>().ShouldBeTrue();
+        }
+
+        [Test]
+        public void has_attribute_on_property_from_base_class_but_overridden_in_derived_class()
+        {
+            var property = ReflectionHelper.GetProperty<DerivedAttributeClass>(x => x.OnBaseForOverride);
+            property.HasAttribute<FakeAttribute>().ShouldBeTrue();
+        }
+
+        [Test]
+        public void has_attribute_on_derived_property_but_not_base_cannot_be_found()
+        {
+            var property = ReflectionHelper.GetProperty<DerivedAttributeClass>(x => x.NotOnBase);
+            property.HasAttribute<FakeAttribute>().ShouldBeFalse();
+        }
+
+
+        [Test]
+        public void get_many_attributes()
+        {
+            ReflectionHelper.GetAccessor<AttributeClass>(x => x.Name).GetAllAttributes<Multiple>().ShouldHaveCount(3);
         }
 
         [Test]
@@ -149,9 +185,39 @@ namespace FubuCore.Testing
 
         [Fake("number")]
         public int Number { get; set; }
+
+        [Multiple, Multiple, Multiple]
         public string Name { get; set; }
     }
 
+    public class DerivedAttributeClass : BaseAttributeClass
+    {
+        public override string OnBaseForOverride
+        {
+            get { return "X"; } set { base.OnBaseForOverride = value; }
+        }
+        [Fake("baz")]
+        public override string NotOnBase
+        {
+            get { return "X"; }
+            set { base.OnBaseForOverride = value; }
+        }
+    }
+
+    public class BaseAttributeClass
+    {
+        [Fake("bar")]
+        public virtual string OnBaseForOverride { get; set; }
+        [Fake("foo")]
+        public virtual string OnBase { get; set; }
+
+        public virtual string NotOnBase { get; set; }
+    }
+
+    [AttributeUsage(AttributeTargets.All, AllowMultiple = true)]
+    public class Multiple : Attribute{}
+
+    [AttributeUsage(AttributeTargets.Method | AttributeTargets.Property, AllowMultiple = false, Inherited = true)]
     public class FakeAttribute : Attribute
     {
         private readonly string _name;

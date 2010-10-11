@@ -15,6 +15,9 @@ namespace HtmlTags
     }
 
     public class HtmlTag : ITagSource
+#if !LEGACY
+        , IHtmlString
+#endif
     {
         public static HtmlTag Empty()
         {
@@ -34,6 +37,7 @@ namespace HtmlTags
         private bool _isVisible = true;
         private string _tag;
         private bool _ignoreClosingTag;
+        private bool _isAuthorized = true;
 
         private HtmlTag()
         {
@@ -167,6 +171,7 @@ namespace HtmlTags
 
         public HtmlTag MetaData<T>(string key, Action<T> configure) where T : class
         {
+            if (!_metaData.Has(key)) return this;
             var value = (T)_metaData[key];
             configure(value);
 
@@ -175,7 +180,7 @@ namespace HtmlTags
 
         public object MetaData(string key)
         {
-            return _metaData[key];
+            return !_metaData.Has(key) ? null : _metaData[key];
         }
 
         public HtmlTag Text(string text)
@@ -196,10 +201,26 @@ namespace HtmlTags
             return this;
         }
 
+        public HtmlTag Authorized(bool isAuthorized)
+        {
+            _isAuthorized = isAuthorized;
+            return this;
+        }
+
+        public bool Authorized()
+        {
+            return _isAuthorized;
+        }
+
 
         public override string ToString()
         {
             return ToString(new HtmlTextWriter(new StringWriter(), string.Empty){NewLine = string.Empty});
+        }
+
+        public string ToHtmlString()
+        {
+            return ToString();
         }
 
         public string ToPrettyString()
@@ -214,9 +235,15 @@ namespace HtmlTags
             return html.InnerWriter.ToString();
         }
 
+        public bool WillBeRendered()
+        {
+            return _isVisible && _isAuthorized;
+        }
+
         private void writeHtml(HtmlTextWriter html)
         {
             if (!_isVisible) return;
+            if (!_isAuthorized) return;
 
             _htmlAttributes.Each(html.AddAttribute);
 
@@ -301,12 +328,20 @@ namespace HtmlTags
 
         public HtmlTag AddClass(string className)
         {
-            if (className.Contains(" ")) throw new ArgumentException("CSS class names cannot contain spaces. If you are attempting to add multiple classes, call AddClasses() instead. Problem class was '{0}'".ToFormat(className), "className");
+            if (isInvalidClassName(className)) throw new ArgumentException("CSS class names cannot contain spaces. If you are attempting to add multiple classes, call AddClasses() instead. Problem class was '{0}'".ToFormat(className), "className");
 
             _cssClasses.Add(className);
 
             return this;
         }
+
+        private static bool isInvalidClassName(string className)
+        {
+            if (className.StartsWith("{") && className.EndsWith("}")) return false;
+
+            return className.Contains(" ");
+        }
+
 
         public HtmlTag AddClasses(params string[] classes)
         {
@@ -328,6 +363,12 @@ namespace HtmlTags
         public bool HasClass(string className)
         {
             return _cssClasses.Contains(className);
+        }
+
+        public HtmlTag RemoveClass(string className)
+        {
+            _cssClasses.Remove(className);
+            return this;
         }
 
         public bool HasMetaData(string key)
@@ -372,6 +413,10 @@ namespace HtmlTags
         {
             var wrapper = new HtmlTag(tag);
             wrapper.Child(this);
+
+            // Copies visibility and authorization from inner tag
+            wrapper.Visible(Visible());
+            wrapper.Authorized(Authorized());
 
             return wrapper;
         }

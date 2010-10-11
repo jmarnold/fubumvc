@@ -1,10 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Web.Routing;
+using FubuCore;
 using FubuCore.Reflection;
 using FubuMVC.Core;
 using FubuMVC.Core.Runtime;
+using FubuMVC.Core.Security;
 using FubuMVC.Core.Urls;
 using FubuMVC.Core.View;
 using FubuMVC.StructureMap;
@@ -19,6 +22,31 @@ using StructureMap;
 namespace FubuMVC.Tests.UI.Forms
 {
     [TestFixture]
+    public class when_calling_link_to_new
+    {
+        private IFubuPage _page;
+        private IUrlRegistry _urls;        
+
+        [SetUp]
+        public void SetUp()
+        {
+            _page = MockRepository.GenerateMock<IFubuPage>();
+            _urls = new StubUrlRegistry();            
+            _page.Stub(p => p.Urls).Return(_urls);
+
+            var endpoints = new EndpointService(new StubAuthorizationPreviewService(), _urls);
+            _page.Stub(p => p.Get<IEndpointService>()).Return(endpoints);
+        }
+
+        [Test]
+        public void for_an_entity()
+        {
+            var tag = _page.LinkToNew<InputModel>();
+            tag.Attr("href").ShouldEqual("url for new {0}".ToFormat(typeof (InputModel).FullName));
+        }
+    }
+
+    [TestFixture]
     public class when_calling_link_to
     {
         private IFubuPage _page;
@@ -32,6 +60,9 @@ namespace FubuMVC.Tests.UI.Forms
             _urls = new StubUrlRegistry();
             _model = new InputModel();
             _page.Stub(p => p.Urls).Return(_urls);
+
+            var endpoints = new EndpointService(new StubAuthorizationPreviewService(), _urls);
+            _page.Stub(p => p.Get<IEndpointService>()).Return(endpoints);
         }
 
         [Test]
@@ -53,6 +84,49 @@ namespace FubuMVC.Tests.UI.Forms
         {
             HtmlTag tag = _page.LinkTo<TestController>(x => x.Index());
             tag.Attr("href").ShouldEqual("url for FubuMVC.Tests.TestController.Index()");
+        }
+    }
+
+    public class StubAuthorizationPreviewService : IAuthorizationPreviewService
+    {
+        public bool IsAuthorized(object model)
+        {
+            return true;
+        }
+
+        public bool IsAuthorized(object model, string category)
+        {
+            return true;
+        }
+
+        public bool IsAuthorized<TController>(Expression<Action<TController>> expression)
+        {
+            return true;
+        }
+
+        public bool IsAuthorizedForNew<T>()
+        {
+            return true;
+        }
+
+        public bool IsAuthorizedForNew(Type entityType)
+        {
+            return true;
+        }
+
+        public bool IsAuthorizedForPropertyUpdate(object model)
+        {
+            return true;
+        }
+
+        public bool IsAuthorizedForPropertyUpdate(Type type)
+        {
+            return true;
+        }
+
+        public bool IsAuthorized(Type handlerType, MethodInfo method)
+        {
+            return true;
         }
     }
 
@@ -127,7 +201,7 @@ namespace FubuMVC.Tests.UI.Forms
             
             _page = MockRepository.GenerateMock<IFubuPage<ViewModel>>();
             _page.Expect(p => p.Model).Return(new ViewModel());
-            _page.Expect(p => p.Get<TagGenerator<ViewModel>>()).Return(generator);
+            _page.Expect(p => p.Get<ITagGenerator<ViewModel>>()).Return(generator);
         }
 
         [Test]
@@ -167,7 +241,7 @@ namespace FubuMVC.Tests.UI.Forms
             
             var generator = container.GetInstance<TagGenerator<ArbitraryModel>>();
             _page = MockRepository.GenerateMock<IFubuPage>();
-            _page.Stub(p => p.Get<TagGenerator<ArbitraryModel>>()).Return(generator);
+            _page.Stub(p => p.Get<ITagGenerator<ArbitraryModel>>()).Return(generator);
             var fubuRequest = MockRepository.GenerateMock<IFubuRequest>();
             _modelFromFubuRequest = new ArbitraryModel{City="Austin"};
             fubuRequest.Stub(x => x.Get<ArbitraryModel>()).Return(_modelFromFubuRequest);
@@ -217,7 +291,7 @@ namespace FubuMVC.Tests.UI.Forms
 
             var generator = container.GetInstance<TagGenerator<ArbitraryModel>>();
             _page = MockRepository.GenerateMock<IFubuPage>();
-            _page.Stub(p => p.Get<TagGenerator<ArbitraryModel>>()).Return(generator);
+            _page.Stub(p => p.Get<ITagGenerator<ArbitraryModel>>()).Return(generator);
             _givenModel = new ArbitraryModel { City = "Austin" };
         }
 

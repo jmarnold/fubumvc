@@ -2,6 +2,7 @@ using System;
 using System.Linq.Expressions;
 using FubuCore;
 using FubuCore.Reflection;
+using FubuMVC.Core;
 using FubuMVC.Core.Runtime;
 using FubuMVC.Core.View;
 using FubuMVC.UI.Configuration;
@@ -12,28 +13,37 @@ namespace FubuMVC.UI
 {
     public static class FubuPageExtensions
     {
-        public static TagGenerator<T> Tags<T>(this IFubuPage<T> page) where T : class
+        public static ITagGenerator<T> Tags<T>(this IFubuPage<T> page) where T : class
         {
-            var generator = page.Get<TagGenerator<T>>();
-            generator.Model = page.Model;
+            var generator = page.Get<ITagGenerator<T>>();
+            generator.Model = page.Model ?? page.Get<IFubuRequest>().Get<T>();
             generator.ElementPrefix = page.ElementPrefix;
             return generator;
         }
 
-        public static TagGenerator<T> Tags<T>(this IFubuPage page) where T : class
+        public static ITagGenerator<T> Tags<T>(this IFubuPage page) where T : class
         {
-            var generator = page.Get<TagGenerator<T>>();
+            var generator = page.Get<ITagGenerator<T>>();
             generator.Model = page.Get<IFubuRequest>().Get<T>();
             generator.ElementPrefix = page.ElementPrefix;
             return generator;
         }
 
-        public static TagGenerator<T> Tags<T>(this IFubuPage page, T model) where T : class
+        public static ITagGenerator<T> Tags<T>(this IFubuPage page, T model) where T : class
         {
-            var generator = page.Get<TagGenerator<T>>();
+            var generator = page.Get<ITagGenerator<T>>();
             generator.Model = model;
             generator.ElementPrefix = page.ElementPrefix;
             return generator;
+        }
+
+        public static HtmlTag AuthorizedLinkTo(this IFubuPage page, Func<IEndpointService, Endpoint> finder)
+        {
+            var endpoints = page.Get<IEndpointService>();
+            var endpoint = finder(endpoints);
+
+            return new LinkTag(string.Empty, endpoint.Url)
+                .Authorized(endpoint.IsAuthorized);
         }
 
 
@@ -44,15 +54,19 @@ namespace FubuMVC.UI
 
         public static HtmlTag LinkTo(this IFubuPage page, object inputModel)
         {
-            return new LinkTag("", page.Urls.UrlFor(inputModel));
+            return page.AuthorizedLinkTo(x => x.EndpointFor(inputModel));
         }
 
         public static HtmlTag LinkTo<TController>(this IFubuPage page, Expression<Action<TController>> actionExpression)
         {
-            return new LinkTag("", page.Urls.UrlFor(actionExpression));
+            return page.AuthorizedLinkTo(x => x.EndpointFor(actionExpression));
         }
 
-
+        public static HtmlTag LinkToNew<T> (this IFubuPage page)
+        {
+            return page.AuthorizedLinkTo(x => x.EndpointForNew<T>());
+        }
+        
         public static string LinkVariable(this IFubuPage page, string variable, object input)
         {
             string url = page.Urls.UrlFor(input);
@@ -195,6 +209,14 @@ namespace FubuMVC.UI
 			return new TextboxTag(name, (value == null) ? "" : value.ToString());
         }
 
+        // TODO -- Jeremy to add tests
+        // IN Dovetail, want to add a label attribute for the localized header of the property
+        public static CheckboxTag CheckBoxFor<T>(this IFubuPage<T> page, Expression<Func<T, bool>> expression) where T : class
+        {
+            // TODO -- run modifications on this?
+            return new CheckboxTag(page.Model.ValueOrDefault(expression));
+        }
+
         public static FormTag FormFor(this IFubuPage page)
         {
             return new FormTag();
@@ -236,6 +258,11 @@ namespace FubuMVC.UI
         public static string EndForm(this IFubuPage page)
         {
             return "</form>";
+        }
+
+        public static HtmlTag Span(this IFubuPage page, string text)
+        {
+            return new HtmlTag("span").Text(text);
         }
     }
 }

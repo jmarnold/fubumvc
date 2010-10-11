@@ -1,4 +1,7 @@
-using FubuMVC.Core.Runtime;
+using System.Security.Principal;
+using System.Threading;
+using FubuMVC.Core;
+using FubuMVC.Core.Security;
 using FubuMVC.Core.View;
 using FubuMVC.Core.View.WebForms;
 using FubuMVC.UI.Partials;
@@ -22,6 +25,7 @@ namespace FubuMVC.Tests.View.WebForms
         private TestModel _model;
         private PartialTestModel _partialModel;
         private ITagGenerator<TestModel> _tagGenerator;
+        private IEndpointService _endpointService;
 
         [SetUp]
         public void SetUp()
@@ -31,20 +35,65 @@ namespace FubuMVC.Tests.View.WebForms
             _partialView = MockRepository.GenerateStub<IFubuPage>();
             _renderer = MockRepository.GenerateMock<IPartialRenderer>();
             _tagGenerator = MockRepository.GenerateMock<ITagGenerator<TestModel>>();
-
+            _endpointService = MockRepository.GenerateMock<IEndpointService>();
             _model = new TestModel();
             _partialModel = new PartialTestModel();
 
             _model.PartialModel = _partialModel;
 
-            _expression = new RenderPartialExpression<TestModel>(_model, _view, _renderer,_tagGenerator);
+            _expression = new RenderPartialExpression<TestModel>(_model, _view, _renderer,_tagGenerator, _endpointService);
             _expression.Using<IFubuPage>(v => { _wasCalled = true; });
+        }
+
+        [Test]
+        public void when_rendering_a_partial_and_the_user_has_access_to_the_role()
+        {
+            PrincipalRoles.Current = new GenericPrincipal(Thread.CurrentPrincipal.Identity, new[] { "foo" });
+            _expression.RequiresAccessTo("foo", "bar");
+            _expression.For(x => new TestModel().PartialModel);
+            _expression.ToString().ShouldNotEqual(string.Empty);
+            PrincipalRoles.Current = null;
+        }
+
+        [Test]
+        public void when_rendering_a_partial_and_the_user_does_not_have_access_to_the_role()
+        {
+            PrincipalRoles.Current = new GenericPrincipal(Thread.CurrentPrincipal.Identity, new[] { "foo" });
+            _expression.RequiresAccessTo("bar");            
+            _expression.ToString().ShouldEqual(string.Empty);
+            PrincipalRoles.Current = null;
         }
 
         [Test]
         public void using_control_should_call_the_option_action_on_the_view()
         {
             _wasCalled.ShouldBeTrue();
+        }
+
+        [Test]
+        public void if_endpoint_service_returns_false_should_not_render_the_partial()
+        {
+            _endpointService.Stub(x => x.EndpointFor<TestModel>(y => y.NoAccess())).IgnoreArguments().Return(new Endpoint{IsAuthorized = false});
+            _expression.RequiresAccessTo<TestModel>(x => x.NoAccess());
+            _expression.ToString().ShouldEqual(string.Empty);
+        }
+
+        [Test]
+        public void if_enpoint_service_returns_false_at_any_point_should_not_render_the_partial()
+        {
+            //two enpoints, one with access and one without access, make sure we don't render even if the last call has access.
+            _endpointService.Stub(x => x.EndpointFor<TestModel>(y => y.Access())).IgnoreArguments().Return(new Endpoint { IsAuthorized = true }).Repeat.Once();
+            _endpointService.Stub(x => x.EndpointFor<TestModel>(y => y.NoAccess())).IgnoreArguments().Return(new Endpoint {IsAuthorized = false}).Repeat.Once();
+            
+            _expression.For(x => new TestModel().PartialModel).RequiresAccessTo<TestModel>(x => x.Access()).RequiresAccessTo<TestModel>(x => x.NoAccess()).ToString().ShouldEqual(string.Empty);
+        }
+
+        [Test]
+        public void if_endpoint_service_returns_true_should_render_the_partial()
+        {
+            _endpointService.Stub(x => x.EndpointFor<TestModel>(y => y.Access())).IgnoreArguments().Return(new Endpoint { IsAuthorized = true });
+            _expression.For(x=> new TestModel().PartialModel).RequiresAccessTo<TestModel>(x => x.Access());
+            _expression.ToString().ShouldNotEqual(string.Empty);            
         }
 
         [Test]
@@ -218,11 +267,12 @@ namespace FubuMVC.Tests.View.WebForms
         {
             public PartialTestModel PartialModel { get; set; }
             public PartialTestModel[] PartialModelArray { get; set; }
+            public void NoAccess(){}
+            public void Access() {}
         }
 
         public class PartialTestModel
-        {
-            
+        {            
         }
-    }
+    }    
 }

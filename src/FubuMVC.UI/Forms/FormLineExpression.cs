@@ -1,29 +1,61 @@
 using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
+using System.Web;
+using FubuMVC.Core.Security;
 using FubuMVC.UI.Configuration;
+using FubuMVC.UI.Security;
 using FubuMVC.UI.Tags;
 using HtmlTags;
 
 namespace FubuMVC.UI.Forms
 {
-    // TODO:  Revisit this, and wrap some serious tests around it
-    public class FormLineExpression<T> : ITagSource where T : class
+    public class FormLineExpression<T> : ITagSource
+#if !LEGACY
+                                         , IHtmlString
+#endif
+        where T : class
     {
         private readonly ITagGenerator<T> _tags;
         private readonly ILabelAndFieldLayout _layout;
-        private readonly Expression<Func<T, object>> _expression;
-        private readonly HashSet<string> _groupByCssClasses = new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
-        public HashSet<string> GroupByCssClasses { get { return _groupByCssClasses; } }
-        private bool _isVisible = true;
 
-        public FormLineExpression(ITagGenerator<T> tags, ILabelAndFieldLayout layout, Expression<Func<T, object>> expression)
+        private readonly HashSet<string> _groupByCssClasses =
+            new HashSet<string>(StringComparer.InvariantCultureIgnoreCase);
+
+        public HashSet<string> GroupByCssClasses
+        {
+            get { return _groupByCssClasses; }
+        }
+
+        private bool _isVisible = true;
+        private readonly ElementRequest _request;
+        private readonly IList<Action<ILabelAndFieldLayout, ElementRequest>> _alterations 
+            = new List<Action<ILabelAndFieldLayout, ElementRequest>>();
+
+        private AccessRight _editable = AccessRight.ReadOnly;
+        private AccessRight _rights = AccessRight.All;
+
+        public FormLineExpression(ITagGenerator<T> tags, ILabelAndFieldLayout layout,
+                                  Expression<Func<T, object>> expression)
+            : this(tags, layout, tags.GetRequest(expression))
+        {
+
+        }
+
+        public FormLineExpression(ITagGenerator<T> tags, ILabelAndFieldLayout layout,
+                                  ElementRequest request)
         {
             _tags = tags;
             _layout = layout;
-            _expression = expression;
+            _request = request;
 
-            _layout.LabelTag = tags.LabelFor(expression);
+            _layout.LabelTag = tags.LabelFor(request);
+
+            AlterLayout(x => GroupByCssClasses.Each(c =>
+            {
+                x.LabelTag.AddClass(c);
+                x.BodyTag.AddClass(c);
+            }));
         }
 
         public FormLineExpression<T> AlterLabel(Action<HtmlTag> alter)
@@ -34,29 +66,23 @@ namespace FubuMVC.UI.Forms
 
         public FormLineExpression<T> GroupByClass(string cssClass)
         {
-            GroupByCssClasses.Add(cssClass);            
+            GroupByCssClasses.Add(cssClass);
             return this;
         }
 
         public FormLineExpression<T> AlterBody(Action<HtmlTag> alter)
         {
-            ensureBodyTag();
-            alter(_layout.BodyTag);
-            return this;
+            return AlterLayout((l, r) => alter(l.BodyTag));
         }
 
         public FormLineExpression<T> AlterLayout(Action<ILabelAndFieldLayout> alter)
         {
-            ensureBodyTag();
-            alter(_layout);
-            return this;
+            return AlterLayout((l, r) => alter(l));
         }
 
         public FormLineExpression<T> AlterLayout(Action<ILabelAndFieldLayout, ElementRequest> alter)
         {
-            ensureBodyTag();
-            var request = _tags.GetRequest(_expression);
-            alter(_layout, request);
+            _alterations.Add(alter);
 
             return this;
         }
@@ -69,16 +95,25 @@ namespace FubuMVC.UI.Forms
 
         public FormLineExpression<T> Editable(bool condition)
         {
-            if (condition)
-            {
-                _layout.BodyTag = _tags.InputFor(_expression);    
-            }
-            else
-            {
-                _layout.BodyTag = _tags.DisplayFor(_expression);
-            }
+            _editable = condition ? AccessRight.All : AccessRight.ReadOnly;
 
             return this;
+        }
+
+        public AccessRight Access()
+        {
+            return _rights;            
+        }
+
+        public FormLineExpression<T> Access(AccessRight rights)
+        {
+            _rights = rights;
+            return this;
+        }
+
+        public AccessRight Editable()
+        {
+            return _editable;
         }
 
         public FormLineExpression<T> EditableForRole(params string[] roles)
@@ -100,35 +135,52 @@ namespace FubuMVC.UI.Forms
 
         public FormLineExpression<T> BodyId(string id)
         {
-            ensureBodyTag();
-            _layout.BodyTag.Id(id);
-            return this;
+            return AlterBody(tag => tag.Id(id));
+        }
+
+        public void Compile()
+        {
+            createBodyTag();
+        }
+
+        private void createBodyTag()
+        {
+            _layout.BodyTag = isEditable() ? _tags.InputFor(_request) : _tags.DisplayFor(_request);
+            _alterations.Each(a => a(_layout, _request));
+        }
+
+        private bool isEditable()
+        {
+            return _editable.Write && _rights.Write;
         }
 
         public override string ToString()
         {
-            if (!_isVisible) return string.Empty;
+            if (!isVisible()) return string.Empty;
 
-            ensureBodyTag();
-            AlterLayout(x => GroupByCssClasses.Each(c=>
-                                                        {
-                                                            x.LabelTag.AddClass(c);
-                                                            x.BodyTag.AddClass(c);
-                                                        }));
+            createBodyTag();
+
             return _layout.ToString();
+        }
+
+        public string ToHtmlString()
+        {
+            return ToString();
+        }
+
+        private bool isVisible()
+        {
+            return _isVisible && _rights.Read;
         }
 
         IEnumerable<HtmlTag> ITagSource.AllTags()
         {
-            return !_isVisible ? new HtmlTag[0] : _layout.AllTags();
+            if (!isVisible()) return new HtmlTag[0];
+
+            createBodyTag();
+
+            return _layout.AllTags();
         }
 
-        private void ensureBodyTag()
-        {
-            if (_layout.BodyTag == null)
-            {
-                _layout.BodyTag = _tags.DisplayFor(_expression);
-            }
-        }
     }
 }

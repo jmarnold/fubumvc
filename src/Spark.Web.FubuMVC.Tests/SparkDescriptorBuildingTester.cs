@@ -11,6 +11,7 @@ using Spark.FileSystem;
 using Spark.Parser;
 using Spark.Web.FubuMVC.Tests.Controllers;
 using Spark.Web.FubuMVC.ViewLocation;
+using Microsoft.Practices.ServiceLocation;
 
 namespace Spark.Web.FubuMVC.Tests
 {
@@ -22,15 +23,16 @@ namespace Spark.Web.FubuMVC.Tests
         [SetUp]
         public void Init()
         {
-            CompiledViewHolder.Current = null;
+            //CompiledViewHolder.Current = null;
+            var serviceLocator = MockRepository.GenerateStub<IServiceLocator>();
 
-            _factory = new SparkViewFactory();
+            _factory = new SparkViewFactory(null, serviceLocator);
             _viewFolder = new InMemoryViewFolder();
             _factory.ViewFolder = _viewFolder;
             var httpContext = MockRepository.GenerateStub<HttpContextBase>();
             _routeData = new RouteData();
             var controller = new StubController();
-            _actionContext = new ActionContext(httpContext, _routeData, controller.GetType().Namespace);
+            _actionContext = new ActionContext(httpContext, _routeData, controller.GetType().Namespace, "Bar");
         }
 
         #endregion

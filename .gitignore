@@ -1,6 +1,8 @@
 push.bat
 TestResult.xml
 build
+build35
+artifacts
 obj
 bin
 deploy
@@ -13,3 +15,5 @@ _ReSharper.*
 *.suo
 *.cache
 ~$*
+
+src/FubuMVC.5.1.ReSharper

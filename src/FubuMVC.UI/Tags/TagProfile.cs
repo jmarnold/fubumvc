@@ -1,3 +1,6 @@
+using System;
+using FubuMVC.UI.Forms;
+
 namespace FubuMVC.UI.Tags
 {
     public class TagProfile
@@ -24,6 +27,7 @@ namespace FubuMVC.UI.Tags
         public TagFactory Editor { get; private set; }
         public TagFactory BeforePartial { get; private set; }
         public TagFactory AfterPartial { get; private set; }
+
         public PartialTagFactory BeforeEachOfPartial { get; private set; }
         public PartialTagFactory AfterEachOfPartial { get; private set; }
 
@@ -37,6 +41,23 @@ namespace FubuMVC.UI.Tags
             AfterPartial.Merge(peer.AfterPartial);
             BeforeEachOfPartial.Merge(peer.BeforeEachOfPartial);
             AfterEachOfPartial.Merge(peer.AfterEachOfPartial);
+        }
+
+        private Func<ILabelAndFieldLayout> _layoutBuilder = () => new DefinitionListLabelAndField();
+
+        public ILabelAndFieldLayout NewLabelAndFieldLayout()
+        {
+            return _layoutBuilder();
+        }
+
+        public void UseLabelAndFieldLayout<T>() where T : ILabelAndFieldLayout, new()
+        {
+            _layoutBuilder = () => new T();
+        }
+
+        public void UseLabelAndFieldLayout(Func<ILabelAndFieldLayout> layoutBuilder)
+        {
+            _layoutBuilder = layoutBuilder;
         }
     }
 }

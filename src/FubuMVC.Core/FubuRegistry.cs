@@ -5,6 +5,7 @@ using FubuMVC.Core.Diagnostics;
 using FubuMVC.Core.Registration;
 using FubuMVC.Core.Registration.Conventions;
 using FubuMVC.Core.Registration.Nodes;
+using FubuMVC.Core.Security;
 using FubuMVC.Core.Urls;
 using FubuMVC.Core.View;
 using FubuMVC.Core.View.WebForms;
@@ -27,9 +28,7 @@ namespace FubuMVC.Core
         private readonly RouteDefinitionResolver _routeResolver = new RouteDefinitionResolver();
         private readonly List<IConfigurationAction> _systemPolicies = new List<IConfigurationAction>();
         private readonly TypePool _types = new TypePool();
-        private readonly List<IUrlRegistrationConvention> _urlConventions = new List<IUrlRegistrationConvention>();
 
-        private readonly UrlRegistry _urls = new UrlRegistry();
         private readonly IPartialViewTypeRegistry _partialViewTypes = new PartialViewTypeRegistry();
         private readonly ViewAttacher _viewAttacher;
         private IConfigurationObserver _observer;
@@ -40,37 +39,12 @@ namespace FubuMVC.Core
         public FubuRegistry()
         {
             _observer = new NulloConfigurationObserver();
-
             _viewAttacher = new ViewAttacher(_types);
 
-            // Default method filters
-            Actions.IgnoreMethodsDeclaredBy<object>();
-            Actions.IgnoreMethodsDeclaredBy<MarshalByRefObject>();
-            Actions.IgnoreMethodsDeclaredBy<IDisposable>();
-
-            // Add Behaviors First
-            addConvention(graph => _behaviorMatcher.BuildBehaviors(_types, graph));
-            addConvention(graph => _actionSourceMatcher.BuildBehaviors(_types, graph));
-            addConvention(graph => _routeResolver.ApplyToAll(graph));
-
-
-            Policies.Add<StringOutputPolicy>();
-            Policies.Add<WebFormsEndpointPolicy>();
-            Policies.Add<ContinuationHandlerConvention>();
-
-            Output.ToHtml.WhenCallMatches(x => x.Method.HasAttribute<HtmlEndpointAttribute>());
-            Output.ToJson.WhenCallMatches(x => x.Method.HasAttribute<JsonEndpointAttribute>());
-            Output.ToJson.WhenTheOutputModelIs<JsonMessage>();
-
-            Output.To<RenderHtmlDocumentNode>().WhenTheOutputModelIs<HtmlDocument>();
-            Output.To<RenderHtmlTagNode>().WhenTheOutputModelIs<HtmlTag>();
-
-            _conventions.Add(_viewAttacher);
-            Policies.Add<JsonMessageInputConvention>();
-            Policies.Add<UrlRegistryCategoryConvention>();
-
-            _urlConventions.Add(new UrlForNewConvention());
+            setupDefaultConventionsAndPolicies();
         }
+
+
 
         public FubuRegistry(Action<FubuRegistry> configure)
             : this()
@@ -103,18 +77,9 @@ namespace FubuMVC.Core
             _policies.Configure(graph);
             _systemPolicies.Configure(graph);
 
-            _urlConventions.Each(x => x.Configure(graph, _urls));
-
-            registerUrls(graph);
-
             return graph;
         }
 
-        private void registerUrls(BehaviorGraph graph)
-        {
-            var builder = new UrlRegistryBuilder(_urls);
-            graph.VisitRoutes(builder);
-        }
     }
 
     public interface IFubuRegistryExtension

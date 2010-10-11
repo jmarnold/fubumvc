@@ -1,4 +1,5 @@
-﻿<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -11,6 +12,7 @@
     <RootNamespace>FubuMVC.HelloSpark</RootNamespace>
     <AssemblyName>FubuMVC.HelloSpark</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -29,8 +32,11 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Spark, Version=1.1.0.0, Culture=neutral, PublicKeyToken=7f8549eed921a12c, processorArchitecture=MSIL" />
+    <Reference Include="StructureMap, Version=2.6.2.0, Culture=neutral, PublicKeyToken=e60ad81abae3c223, processorArchitecture=MSIL" />
     <Reference Include="System" />
     <Reference Include="System.Data" />
     <Reference Include="System.Core">
@@ -51,16 +57,27 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="Global.asax" />
+    <Content Include="Scripts\jquery-1.4.2.js" />
     <Content Include="Web.config" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Controllers\AirController.cs" />
+    <Compile Include="Features\FifthElement\FifthElementController.cs" />
+    <Compile Include="Controllers\LocationController.cs" />
+    <Compile Include="Controllers\EarthController.cs" />
     <Compile Include="Controllers\WaterController.cs" />
     <Compile Include="Controllers\FireController.cs" />
+    <Compile Include="Features\FifthElement\FifthElementViewModel.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
+    <Compile Include="HelloSparkRegistry.cs" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\FubuCore\FubuCore.csproj">
+      <Project>{342B987C-E0A4-4129-958D-8E08084E8A06}</Project>
+      <Name>FubuCore</Name>
+    </ProjectReference>
     <ProjectReference Include="..\FubuMVC.Core\FubuMVC.Core.csproj">
       <Project>{E18FD922-0E7A-49CD-B89F-473826077B9D}</Project>
       <Name>FubuMVC.Core</Name>
@@ -69,14 +86,29 @@
       <Project>{ABFEA520-820C-4B77-9015-6A09E24252FA}</Project>
       <Name>FubuMVC.StructureMap</Name>
     </ProjectReference>
+    <ProjectReference Include="..\FubuMVC.UI\FubuMVC.UI.csproj">
+      <Project>{64DFEA5F-18DE-4E7C-AF9C-3BEF1E42D2C2}</Project>
+      <Name>FubuMVC.UI</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\HtmlTags\HtmlTags.csproj">
+      <Project>{F01C84F2-6E41-404C-AC8D-BF189A9EC05B}</Project>
+      <Name>HtmlTags</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Spark.Web.FubuMVC\Spark.Web.FubuMVC.csproj">
       <Project>{E0CE2949-1667-4C21-8DEC-70615A77D62F}</Project>
       <Name>Spark.Web.FubuMVC</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="Features\FifthElement\AnotherDimension.spark" />
+    <None Include="Views\Air\_Breathe.spark" />
+    <None Include="Views\Air\TakeABreath.spark" />
+    <None Include="Views\Earth\Rock.spark" />
+    <None Include="Views\Location\WhereAreWe.spark" />
     <None Include="Views\Shared\Application.spark" />
     <None Include="Views\Fire\Create.spark" />
+    <None Include="Views\Shared\_global.spark" />
+    <None Include="Views\Shared\_WhereAreWe.spark" />
     <None Include="Views\Water\Spray.spark" />
   </ItemGroup>
   <ItemGroup>
@@ -84,7 +116,7 @@
     <Folder Include="Properties\" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets"/>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v10.0\WebApplications\Microsoft.WebApplication.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
@@ -98,11 +130,14 @@
         <WebProjectProperties>
           <UseIIS>False</UseIIS>
           <AutoAssignPort>True</AutoAssignPort>
-          <DevelopmentServerPort>2756</DevelopmentServerPort>
+          <DevelopmentServerPort>2711</DevelopmentServerPort>
           <DevelopmentServerVPath>/</DevelopmentServerVPath>
           <IISUrl>
           </IISUrl>
           <NTLMAuthentication>False</NTLMAuthentication>
+          <UseCustomServer>False</UseCustomServer>
+          <CustomServerUrl>
+          </CustomServerUrl>
           <SaveServerSettingsInUserFile>False</SaveServerSettingsInUserFile>
         </WebProjectProperties>
       </FlavorProperties>

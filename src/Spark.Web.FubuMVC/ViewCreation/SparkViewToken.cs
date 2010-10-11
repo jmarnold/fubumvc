@@ -11,12 +11,14 @@ namespace Spark.Web.FubuMVC.ViewCreation
         private readonly SparkViewDescriptor _matchedDescriptor;
         private readonly string _actionName;
         private readonly IList<SparkViewDescriptor> _descriptors;
+        private string _viewName;
 
-        public SparkViewToken(ActionCall actionCall, SparkViewDescriptor matchedDescriptor, string actionName)
+        public SparkViewToken(ActionCall actionCall, SparkViewDescriptor matchedDescriptor, string actionName, string viewName)
         {
             _actionCall = actionCall;
             _matchedDescriptor = matchedDescriptor;
             _actionName = actionName;
+            _viewName = viewName;
         }
 
         public SparkViewToken(IList<SparkViewDescriptor> descriptors)
@@ -27,6 +29,11 @@ namespace Spark.Web.FubuMVC.ViewCreation
         public IList<SparkViewDescriptor> Descriptors
         {
             get { return _descriptors; }
+        }
+
+        public SparkViewDescriptor MatchedDescriptor
+        {
+            get { return _matchedDescriptor; }
         }
 
         public string ActionName
@@ -43,7 +50,7 @@ namespace Spark.Web.FubuMVC.ViewCreation
 
         public Type ViewType
         {
-            get { return typeof (ISparkView); }
+            get { return typeof(ISparkView); }
         }
 
         public Type ViewModelType
@@ -53,7 +60,7 @@ namespace Spark.Web.FubuMVC.ViewCreation
 
         public string Name
         {
-            get { return _actionCall.Method.Name; }
+            get { return _viewName; }
         }
 
         public string Folder

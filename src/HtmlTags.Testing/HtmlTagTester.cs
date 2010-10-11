@@ -11,7 +11,10 @@ namespace HtmlTags.Testing
         [Test]
         public void I_just_want_to_generate_a_div_with_text_and_a_class()
         {
-            HtmlTag tag = new HtmlTag("div").Text("my text").AddClass("collapsible");
+
+            HtmlTag tag = new HtmlTag("div")
+                .Text("my text")
+                .AddClass("collapsible");
             tag.Add("span").Text("inner");
             Debug.WriteLine(tag.ToString());
         }
@@ -136,6 +139,39 @@ namespace HtmlTags.Testing
         }
 
         [Test]
+        public void retrieve_a_previously_set_metadata()
+        {
+            var tag = new HtmlTag("div");
+            tag.MetaData("name", "joe");
+            tag.MetaData("name").ShouldEqual("joe");
+        }
+
+        [Test]
+        public void retrieve_a_non_existing_metadata_should_return_null()
+        {
+            var tag = new HtmlTag("div");
+            tag.MetaData("name").ShouldBeNull();
+        }
+
+        [Test]
+        public void manipulate_a_previously_set_metadata()
+        {
+            var tag = new HtmlTag("div");
+            tag.MetaData("error", new ListValue{Display = "Original"});
+            tag.MetaData<ListValue>("error", val => val.Display = "Changed");
+            tag.MetaData("error").As<ListValue>().Display.ShouldEqual("Changed");
+        }
+
+        [Test]
+        public void attempt_to_manipulate_a_non_existing_metadata_should_be_a_no_op()
+        {
+            var tag = new HtmlTag("div");
+            tag.MetaData<ListValue>("error", val => val.Display = "Changed");
+            tag.MetaData("error").ShouldBeNull();
+        }
+
+
+        [Test]
         public void render_multiple_attributes()
         {
             HtmlTag tag = new HtmlTag("table").Attr("cellPadding", "2").Attr("cellSpacing", "3");
@@ -182,6 +218,13 @@ namespace HtmlTags.Testing
             {
                 tag.AddClass("a b c");
             });
+        }
+
+        [Test]
+        public void do_allow_a_class_that_is_a_json_blob_with_spaces()
+        {
+            var tag = new HtmlTag("div").AddClass("{a:1, a:2}");
+            tag.ToString().ShouldContain("class=\"{a:1, a:2}\"");
         }
 
         [Test]
@@ -289,6 +332,39 @@ namespace HtmlTags.Testing
         }
 
         [Test]
+        public void wrap_with_copies_the_visibility_from_the_inner_value_positive_case()
+        {
+            var tag = new HtmlTag("a");
+            tag.Visible().ShouldBeTrue();
+            tag.WrapWith("span").Visible().ShouldBeTrue();
+        }
+
+
+        [Test]
+        public void wrap_with_copies_the_visibility_from_the_inner_value_negative_case()
+        {
+            var tag = new HtmlTag("a").Visible(false);
+            tag.WrapWith("span").Visible().ShouldBeFalse();
+        }
+
+
+        [Test]
+        public void wrap_with_copies_the_authorization_from_the_inner_value_positive_case()
+        {
+            var tag = new HtmlTag("a");
+            tag.Authorized().ShouldBeTrue();
+            tag.WrapWith("span").Authorized().ShouldBeTrue();
+        }
+
+
+        [Test]
+        public void wrap_with_copies_the_authorization_from_the_inner_value_negative_case()
+        {
+            var tag = new HtmlTag("a").Authorized(false);
+            tag.WrapWith("span").Authorized().ShouldBeFalse();
+        }
+
+        [Test]
         public void wrap_with_returns_a_new_tag_with_the_original_as_the_first_child()
         {
             var tag = new HtmlTag("a");
@@ -309,6 +385,30 @@ namespace HtmlTags.Testing
             wrapper.FirstChild().ShouldBeTheSameAs(tag);
         }
 
+
+        [Test]
+        public void is_authorized_by_default()
+        {
+            new HtmlTag("div").Authorized().ShouldBeTrue();
+        }
+
+        [Test]
+        public void is_authorized_value_false_makes_tag_hidden_regardless_of_visibility()
+        {
+            var tag = new HtmlTag("div").Authorized(false);
+            tag.ToString().ShouldBeEmpty();
+
+            tag.Visible(true).ToString().ShouldBeEmpty();
+            tag.Visible(false).ToString().ShouldBeEmpty();
+        }
+
+        [Test]
+        public void remove_a_class()
+        {
+            var tag = new HtmlTag("div").AddClasses("a", "b", "c");
+            tag.RemoveClass("b");
+            tag.ToString().ShouldEqual("<div class=\"a c\"></div>");
+        }
 
         public class ListValue
         {

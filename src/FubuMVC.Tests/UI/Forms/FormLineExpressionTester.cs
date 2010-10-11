@@ -1,13 +1,10 @@
-using System;
-using System.Linq.Expressions;
 using System.Security.Principal;
 using System.Threading;
-using FubuCore.Reflection;
-using FubuMVC.UI.Configuration;
 using FubuMVC.UI.Forms;
-using FubuMVC.UI.Tags;
+using FubuMVC.UI.Security;
 using HtmlTags;
 using NUnit.Framework;
+using System.Linq;
 
 namespace FubuMVC.Tests.UI.Forms
 {
@@ -24,12 +21,43 @@ namespace FubuMVC.Tests.UI.Forms
             expression = new FormLineExpression<ViewModel>(new StubTagGenerator<ViewModel>(), layout, x => x.Name);
         }
 
+        [Test]
+        public void alter_layout_with_an_element_request()
+        {
+            expression.AlterLayout((l, r) =>
+            {
+                l.LabelTag.Text("Prop:  " + r.Accessor.Name);
+            });
+
+            expression.Compile();
+
+            layout.LabelTag.Text().ShouldEqual("Prop:  Name");
+        }
+
+        [Test]
+        public void alter_the_body()
+        {
+            expression.AlterBody(b => b.Text("the text"));
+            expression.Compile();
+            layout.BodyTag.Text().ShouldEqual("the text");
+        }
+
+        [Test]
+        public void group_by_css_classes()
+        {
+            expression.GroupByClass("class1");
+            expression.Compile();
+
+            layout.BodyTag.HasClass("class1").ShouldBeTrue();
+            layout.LabelTag.HasClass("class1").ShouldBeTrue();
+        }
+
 
         [Test]
         public void can_change_label_attributes_after_setting_label_text()
         {
             var tag = expression
-                .AlterLayout(x => x.SetLabelText("bar"))
+                .AlterLayout(x => x.LabelTag.Text("bar"))
                 .AlterLabel(label => label.AddClass("foo"));
             
             tag.AlterLayout(x => x.LabelTag.ShouldHaveClass("foo"));
@@ -43,6 +71,8 @@ namespace FubuMVC.Tests.UI.Forms
             layout.BodyTag.GetClasses().ShouldContain("groupByClass");
             layout.LabelTag.GetClasses().ShouldContain("groupByClass");
         }
+
+
 
         [Test]
         public void has_label_by_default()
@@ -65,6 +95,7 @@ namespace FubuMVC.Tests.UI.Forms
         public void body_id()
         {
             expression.BodyId("id2");
+            expression.Compile();
             layout.BodyTag.Id().ShouldEqual("id2");
         }
 
@@ -80,6 +111,17 @@ namespace FubuMVC.Tests.UI.Forms
             });
         }
 
+        [Test]
+        public void editable_is_read_only_by_default()
+        {
+            expression.Editable().ShouldEqual(AccessRight.ReadOnly);
+        }
+
+        [Test]
+        public void access_is_all_by_default()
+        {
+            expression.Access().ShouldEqual(AccessRight.All);
+        }
 
         [Test]
         public void display_by_default_in_the_to_string()
@@ -95,6 +137,47 @@ namespace FubuMVC.Tests.UI.Forms
             string html = expression.Editable(true).ToString();
             html.ShouldContain("input");
             html.ShouldNotContain("display");
+        }
+
+        [Test]
+        public void do_not_edit_if_the_condition_is_true_but_the_access_rights_are_readonly()
+        {
+            var html = expression.Editable(true).Access(AccessRight.ReadOnly).ToString();
+            html.ShouldContain("display");
+            html.ShouldNotContain("input");
+        }
+
+        [Test]
+        public void do_not_display_if_the_editable_condition_is_true_but_the_access_rights_are_none()
+        {
+            expression.Visible(true);
+            expression.Editable(true);
+            expression.Access(AccessRight.None);
+
+            expression.ToString().ShouldBeEmpty();
+        }
+
+
+        [Test]
+        public void do_not_return_any_tags_if_the_editable_condition_is_true_but_the_access_rights_are_none()
+        {
+            expression.Visible(true);
+            expression.Editable(true);
+            expression.Access(AccessRight.None);
+
+            expression.As<ITagSource>().AllTags().Any().ShouldBeFalse();
+        }
+
+
+
+        [Test]
+        public void return_tags_if_the_editable_condition_is_true_and_the_access_rights_is_some()
+        {
+            expression.Visible(true);
+            expression.Editable(true);
+            expression.Access(AccessRight.All);
+
+            expression.As<ITagSource>().AllTags().Any().ShouldBeTrue();
         }
 
         [Test]
@@ -114,6 +197,14 @@ namespace FubuMVC.Tests.UI.Forms
 
             expression.EditableForRole("admin").ToString().ShouldNotContain("input");
         }
+
+        [Test]
+        public void do_not_display_if_the_access_rights_are_none()
+        {
+            expression.Access(AccessRight.None);
+            expression.ToString().ShouldBeEmpty();
+        }
+
 
         [Test]
         public void display_if_the_condition_is_false()
@@ -144,106 +235,6 @@ namespace FubuMVC.Tests.UI.Forms
         public class ViewModel
         {
             public string Name { get; set; }
-        }
-    }
-
-    public class StubTagGenerator<T> : ITagGenerator<T> where T : class
-    {
-        public void SetModel(object model) {}
-
-        public void SetProfile(string profileName)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag LabelFor(Expression<Func<T, object>> expression)
-        {
-            return new HtmlTag("span").AddClass("label").Text(expression.ToAccessor().Name);
-        }
-
-        public HtmlTag LabelFor(Expression<Func<T, object>> expression, string profile)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag InputFor(Expression<Func<T, object>> expression)
-        {
-            return new HtmlTag("span").AddClass("input").Text(expression.ToAccessor().Name);
-        }
-
-        public HtmlTag InputFor(Expression<Func<T, object>> expression, string profile)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag DisplayFor(Expression<Func<T, object>> expression)
-        {
-            return new HtmlTag("span").AddClass("display").Text(expression.ToAccessor().Name);
-        }
-
-        public HtmlTag DisplayFor(Expression<Func<T, object>> expression, string profile)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ElementRequest GetRequest(Expression<Func<T, object>> expression)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag LabelFor(ElementRequest request)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag InputFor(ElementRequest request)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag DisplayFor(ElementRequest request)
-        {
-            throw new NotImplementedException();
-        }
-
-        public ElementRequest GetRequest<TProperty>(Expression<Func<T, TProperty>> expression)
-        {
-            throw new NotImplementedException();
-        }
-
-        public string ElementPrefix { get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); } }
-
-        public string CurrentProfile
-        {
-            get { throw new NotImplementedException(); } }
-
-        public T Model { get { throw new NotImplementedException(); }
-            set { throw new NotImplementedException(); } }
-
-        public ElementRequest GetRequest(Accessor accessor)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag BeforePartial(ElementRequest request)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag AfterPartial(ElementRequest request)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag AfterEachofPartial(ElementRequest request, int current, int count)
-        {
-            throw new NotImplementedException();
-        }
-
-        public HtmlTag BeforeEachofPartial(ElementRequest request, int current, int count)
-        {
-            throw new NotImplementedException();
         }
     }
 }

@@ -12,6 +12,8 @@ using Spark.Web.FubuMVC.Tests.Controllers;
 using Spark.Web.FubuMVC.Tests.Helpers;
 using Spark.Web.FubuMVC.Tests.Models;
 using Spark.Web.FubuMVC.ViewCreation;
+using Microsoft.Practices.ServiceLocation;
+using HtmlTags;
 
 namespace Spark.Web.FubuMVC.Tests
 {
@@ -23,19 +25,20 @@ namespace Spark.Web.FubuMVC.Tests
         [SetUp]
         public void SetUp()
         {
-            CompiledViewHolder.Current = null; //clear the view cache
+            //CompiledViewHolder.Current = null; //clear the view cache
 
             var settings = new SparkSettings();
-            _factory = new SparkViewFactory(settings) {ViewFolder = new FileSystemViewFolder("FubuMVC.Tests.Views")};
+            var serviceLocator = MockRepository.GenerateStub<IServiceLocator>();
+
+            _factory = new SparkViewFactory(settings, serviceLocator) { ViewFolder = new FileSystemViewFolder("FubuMVC.Tests.Views") };
 
             _httpContext = MockHttpContextBase.Generate("/", new StringWriter());
             _response = _httpContext.Response;
             _output = _response.Output;
 
             _routeData = new RouteData();
-            _routeData.Values.Add("controller", "Stub");
             _routeData.Values.Add("action", "Index");
-            _actionContext = new ActionContext(_httpContext, _routeData, new StubController().GetType().Namespace);
+            _actionContext = new ActionContext(_httpContext, _routeData, new StubController().GetType().Namespace, "Stub");
         }
 
         #endregion
@@ -113,17 +116,16 @@ namespace Spark.Web.FubuMVC.Tests
         {
             _factory.ViewFolder = new InMemoryViewFolder
                                       {
-                                          {"Foo\\baz.spark", ""},
+                                          {"Stub\\baz.spark", ""},
                                           {"Shared\\Application.spark", ""}
                                       };
 
-            _routeData.Values["controller"] = "Foo";
             _routeData.Values["action"] = "Notbaz";
 
             SparkViewDescriptor descriptor = _factory.CreateDescriptor(_actionContext, "baz", null, true, null);
 
             descriptor.Templates.ShouldHaveCount(2);
-            descriptor.Templates[0].ShouldEqual("Foo\\baz.spark");
+            descriptor.Templates[0].ShouldEqual("Stub\\baz.spark");
             descriptor.Templates[1].ShouldEqual("Shared\\Application.spark");
         }
 
@@ -132,18 +134,17 @@ namespace Spark.Web.FubuMVC.Tests
         {
             _factory.ViewFolder = new InMemoryViewFolder
                                       {
-                                          {"Foo\\baz.spark", ""},
-                                          {"Shared\\Foo.spark", ""}
+                                          {"Stub\\baz.spark", ""},
+                                          {"Shared\\Stub.spark", ""}
                                       };
 
-            _routeData.Values["controller"] = "Foo";
             _routeData.Values["action"] = "Notbaz";
 
             SparkViewDescriptor descriptor = _factory.CreateDescriptor(_actionContext, "baz", null, true, null);
 
             descriptor.Templates.ShouldHaveCount(2);
-            descriptor.Templates[0].ShouldEqual("Foo\\baz.spark");
-            descriptor.Templates[1].ShouldEqual("Shared\\Foo.spark");
+            descriptor.Templates[0].ShouldEqual("Stub\\baz.spark");
+            descriptor.Templates[1].ShouldEqual("Shared\\Stub.spark");
         }
 
         [Test]
@@ -362,7 +363,9 @@ namespace Spark.Web.FubuMVC.Tests
         [Test, Ignore("Need to figure out why it can't see the reference to HtmlTags.dll")]
         public void should_be_able_to_use_the_html_tags_assembly()
         {
-            ((SparkSettings) _factory.Settings).AddNamespace("HtmlTags");
+            ((SparkSettings) _factory.Settings)
+                .AddAssembly(typeof(HtmlTag).Assembly)
+                .AddNamespace("HtmlTags");
             FindViewAndRender("HtmlTags", null);
 
             string content = _output.ToString();
@@ -387,16 +390,15 @@ namespace Spark.Web.FubuMVC.Tests
         {
             _factory.ViewFolder = new InMemoryViewFolder
                                       {
-                                          {"Foo\\baz.spark", ""}
+                                          {"Stub\\baz.spark", ""}
                                       };
 
-            _routeData.Values["controller"] = "Foo";
             _routeData.Values["action"] = "Notbaz";
 
             SparkViewDescriptor descriptor = _factory.CreateDescriptor(_actionContext, "baz", null, true, null);
 
             descriptor.Templates.ShouldHaveCount(1);
-            descriptor.Templates[0].ShouldEqual("Foo\\baz.spark");
+            descriptor.Templates[0].ShouldEqual("Stub\\baz.spark");
         }
     }
 }

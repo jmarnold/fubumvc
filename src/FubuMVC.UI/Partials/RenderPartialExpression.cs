@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
 using System.Text;
+using System.Web;
 using FubuCore;
 using FubuCore.Reflection;
+using FubuMVC.Core;
+using FubuMVC.Core.Security;
 using FubuMVC.Core.View;
 using FubuMVC.Core.View.WebForms;
 using FubuMVC.UI.Configuration;
@@ -14,6 +17,9 @@ using FubuMVC.UI.Tags;
 namespace FubuMVC.UI.Partials
 {
     public class RenderPartialExpression<TViewModel>
+#if !LEGACY
+        : IHtmlString
+#endif
         where TViewModel : class
     {
         private readonly IFubuPage _parentPage;
@@ -22,8 +28,10 @@ namespace FubuMVC.UI.Partials
         private readonly TViewModel _model;
         private readonly IPartialRenderer _renderer;
         private readonly ITagGenerator<TViewModel> _tagGenerator;
+        private readonly IEndpointService _endpointService;
         private IFubuPage _partialView;
         private bool _shouldDisplay = true;
+        private bool _isAuthorized = true;
         private Func<string> _renderAction;
         private Accessor _accessor;
         private bool _renderListWrapper = true;
@@ -31,19 +39,38 @@ namespace FubuMVC.UI.Partials
 
 
 
-        public RenderPartialExpression(TViewModel model, IFubuPage parentPage, IPartialRenderer renderer, ITagGenerator<TViewModel> tagGenerator)
+        public RenderPartialExpression(TViewModel model, IFubuPage parentPage, IPartialRenderer renderer, ITagGenerator<TViewModel> tagGenerator, IEndpointService endpointService)
         {
             if (tagGenerator == null) throw new ArgumentNullException("tagGenerator");
 
             _model = model;
             _renderer = renderer;
             _tagGenerator = tagGenerator;
+            _endpointService = endpointService;
             _parentPage = parentPage;
         }
 
         public RenderPartialExpression<TViewModel> If(bool display)
         {
             _shouldDisplay = display;
+            return this;
+        }
+
+        public RenderPartialExpression<TViewModel> RequiresAccessTo(params string[] roles)
+        {
+            if (_isAuthorized)
+            {
+                _isAuthorized = PrincipalRoles.IsInRole(roles);
+            }
+            return this;
+        }
+
+        public RenderPartialExpression<TViewModel> RequiresAccessTo<TController>(Expression<Action<TController>> endpoint)
+        {
+            if (_isAuthorized)
+            {
+                _isAuthorized = _endpointService.EndpointFor(endpoint).IsAuthorized;
+            }
             return this;
         }
 
@@ -72,8 +99,6 @@ namespace FubuMVC.UI.Partials
 
             return this;
         }
-
-
 
         public RenderPartialExpression<TViewModel> WithoutPrefix()
         {
@@ -205,11 +230,16 @@ namespace FubuMVC.UI.Partials
 
         public override string ToString()
         {
-            if (!_shouldDisplay) return "";
+            if (!_shouldDisplay || !_isAuthorized) return "";
 
             return _multiModeAction != null 
                        ? RenderMultiplePartials()
                        : _renderAction();
+        }
+
+        public string ToHtmlString()
+        {
+            return ToString();
         }
     }
 }

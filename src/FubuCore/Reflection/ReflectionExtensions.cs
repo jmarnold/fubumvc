@@ -1,8 +1,8 @@
-
 using System;
+using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Reflection;
-using FubuCore;
+using System.Linq;
 
 namespace FubuCore.Reflection
 {
@@ -16,22 +16,32 @@ namespace FubuCore.Reflection
                 return default(U);
             }
 
-            Accessor accessor = ReflectionHelper.GetAccessor(expression);
+            var accessor = ReflectionHelper.GetAccessor(expression);
 
-            object result = accessor.GetValue(root);
+            var result = accessor.GetValue(root);
 
             return (U) (result ?? default(U));
         }
 
         public static T GetAttribute<T>(this ICustomAttributeProvider provider) where T : Attribute
         {
-            object[] atts = provider.GetCustomAttributes(typeof (T), true);
+            var atts = provider.GetCustomAttributes(typeof (T), true);
             return atts.Length > 0 ? atts[0] as T : null;
+        }
+
+        public static IEnumerable<T> GetAllAttributes<T>(this ICustomAttributeProvider provider) where T : Attribute
+        {
+            return provider.GetCustomAttributes(typeof (T), true).Cast<T>();
+        }
+
+        public static IEnumerable<T> GetAllAttributes<T>(this Accessor accessor) where T : Attribute
+        {
+            return accessor.InnerProperty.GetAllAttributes<T>();
         }
 
         public static bool HasAttribute<T>(this ICustomAttributeProvider provider) where T : Attribute
         {
-            object[] atts = provider.GetCustomAttributes(typeof (T), true);
+            var atts = provider.GetCustomAttributes(typeof (T), true);
             return atts.Length > 0;
         }
 
@@ -43,10 +53,11 @@ namespace FubuCore.Reflection
             }
         }
 
-        public static void ForAttribute<T>(this ICustomAttributeProvider provider, Action<T> action, Action elseDo) where T : Attribute
+        public static void ForAttribute<T>(this ICustomAttributeProvider provider, Action<T> action, Action elseDo)
+            where T : Attribute
         {
-            bool found = false;
-            foreach (T attribute in provider.GetCustomAttributes(typeof(T), true))
+            var found = false;
+            foreach (T attribute in provider.GetCustomAttributes(typeof (T), true))
             {
                 action(attribute);
                 found = true;
@@ -84,10 +95,9 @@ namespace FubuCore.Reflection
         }
 
 
-
         public static void IfPropertyTypeIs<T>(this Accessor accessor, Action action)
         {
-            if (accessor.PropertyType == typeof(T))
+            if (accessor.PropertyType == typeof (T))
             {
                 action();
             }

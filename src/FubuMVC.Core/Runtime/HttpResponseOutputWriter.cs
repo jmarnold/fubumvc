@@ -1,4 +1,6 @@
+using System;
 using System.IO;
+using System.Net;
 using System.Web;
 
 namespace FubuMVC.Core.Runtime
@@ -7,31 +9,39 @@ namespace FubuMVC.Core.Runtime
     {
         public void WriteFile(string contentType, string localFilePath, string displayName)
         {
-            HttpResponse response = HttpContext.Current.Response;
             response.ContentType = contentType;
 
 			if (displayName != null)
 			{
-				response.AppendHeader("Content-Disposition", "attachment; filename=" + displayName);
+				response.AppendHeader("Content-Disposition", "attachment; filename=\"" + displayName+"\"");
 			}
 
 			var fileInfo = new FileInfo(localFilePath);
 			response.AppendHeader("Content-Length", fileInfo.Length.ToString());
 
             response.WriteFile(localFilePath);
+
+        }
+
+        private HttpResponse response
+        {
+            get { return HttpContext.Current.Response; }
         }
 
         public void Write(string contentType, string renderedOutput)
         {
-            HttpResponse response = HttpContext.Current.Response;
             response.ContentType = contentType;
             response.Write(renderedOutput);
         }
 
         public void RedirectToUrl(string url)
         {
-            HttpResponse response = HttpContext.Current.Response;
             response.Redirect(url, false);
+        }
+
+        public void WriteResponseCode(HttpStatusCode status)
+        {
+            response.StatusCode = (int)status;
         }
     }
 }

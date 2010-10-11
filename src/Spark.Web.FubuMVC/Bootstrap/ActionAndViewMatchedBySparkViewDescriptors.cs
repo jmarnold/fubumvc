@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using FubuMVC.Core;
+using FubuCore;
 using FubuMVC.Core.Registration.Nodes;
 using FubuMVC.Core.View;
 using Spark.Web.FubuMVC.ViewCreation;
@@ -10,21 +10,24 @@ namespace Spark.Web.FubuMVC.Bootstrap
 {
     public class ActionAndViewMatchedBySparkViewDescriptors : IViewsForActionFilter
     {
-        private readonly Func<string, string> _actionNameFromActionCallConvention;
+        private readonly Func<Type, string> _getViewLocatorNameFromActionType;
+        private readonly Func<ActionCall, string> _getViewNameFromActionCall;
 
-        public ActionAndViewMatchedBySparkViewDescriptors(Func<string, string> getActionNameFromCallConvention)
+        public ActionAndViewMatchedBySparkViewDescriptors(Func<Type, string> getViewLocatorNameFromActionType, Func<ActionCall, string> getViewNameFromActionCall)
         {
-            _actionNameFromActionCallConvention = getActionNameFromCallConvention;
+            _getViewLocatorNameFromActionType = getViewLocatorNameFromActionType;
+            _getViewNameFromActionCall = getViewNameFromActionCall;
         }
 
         #region IViewsForActionFilter Members
 
         public IEnumerable<IViewToken> Apply(ActionCall call, ViewBag views)
         {
-            string viewName = call.Method.Name;
-            string actionName = _actionNameFromActionCallConvention(call.HandlerType.Name);
+            string viewName = _getViewNameFromActionCall(call);
+            string viewLocatorName = _getViewLocatorNameFromActionType(call.HandlerType);
             IEnumerable<SparkViewToken> allViewTokens =
-                views.Views.Cast<SparkViewToken>();
+                views.Views.Where(view =>
+                    view.GetType().CanBeCastTo<SparkViewToken>()).Cast<SparkViewToken>();
 
             SparkViewDescriptor matchedDescriptor = null;
             allViewTokens.FirstOrDefault(
@@ -32,14 +35,16 @@ namespace Spark.Web.FubuMVC.Bootstrap
                 {
                     matchedDescriptor = token.Descriptors
                         .Where(e => e.Templates
-                                        .Any(template => template.Contains(actionName) && template.Contains(viewName)))
+                                        .Any(template => template.Contains(viewLocatorName) && template.Contains(viewName)))
                         .SingleOrDefault();
+
                     return matchedDescriptor != null;
                 });
 
+
             IEnumerable<IViewToken> viewsBoundToActions =
                 matchedDescriptor != null
-                    ? new IViewToken[] { new SparkViewToken(call, matchedDescriptor, actionName) }
+                    ? new IViewToken[] { new SparkViewToken(call, matchedDescriptor, viewLocatorName, viewName) }
                     : new IViewToken[0];
 
             return viewsBoundToActions;

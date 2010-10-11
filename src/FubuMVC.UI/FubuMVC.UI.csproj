@@ -12,6 +12,7 @@
     <AssemblyName>FubuMVC.UI</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +23,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -59,17 +62,34 @@
     <Compile Include="Configuration\PartialLambdaElementBuilder.cs" />
     <Compile Include="Diagnostics\ExampleHtmlWriter.cs" />
     <Compile Include="Diagnostics\HtmlDiagnosticsRegistry.cs" />
+    <Compile Include="Extensibility\ContentExtensionGraph.cs" />
+    <Compile Include="Extensibility\ContentExtensions.cs" />
+    <Compile Include="Extensibility\ExtensionsExpression.cs" />
+    <Compile Include="Extensibility\ExtensionShelf.cs" />
+    <Compile Include="Extensibility\FilteredContentExtension.cs" />
     <Compile Include="Extensibility\IContentExtension.cs" />
+    <Compile Include="Extensibility\LambdaExtension.cs" />
     <Compile Include="Forms\DefinitionListLabelAndField.cs" />
     <Compile Include="Forms\FormLineExpression.cs" />
     <Compile Include="Forms\ILabelAndFieldLayout.cs" />
+    <Compile Include="Navigation\AuthorizedContextualMenu.cs" />
+    <Compile Include="Navigation\IContextualAction.cs" />
+    <Compile Include="Navigation\IContextualMenu.cs" />
+    <Compile Include="Navigation\MenuItemState.cs" />
+    <Compile Include="Navigation\MenuItemToken.cs" />
     <Compile Include="Partials\RenderPartialExpression.cs" />
     <Compile Include="FubuPageExtensions.cs" />
     <Compile Include="FubuRegistryUIExtensions.cs" />
     <Compile Include="Configuration\HtmlConventionCompiler.cs" />
     <Compile Include="Configuration\Interfaces.cs" />
     <Compile Include="PartialExpressionExtensions.cs" />
-    <Compile Include="PrincipalRoles.cs" />
+    <Compile Include="Security\AccessRight.cs" />
+    <Compile Include="Security\AccessRightExtensions.cs" />
+    <Compile Include="Security\FieldAccessService.cs" />
+    <Compile Include="Security\FieldAccessRights.cs" />
+    <Compile Include="Security\IFieldAccessRule.cs" />
+    <Compile Include="ServiceLocatorExtensions.cs" />
+    <Compile Include="ShowEditFieldExpressions.cs" />
     <Compile Include="Tags\PartialLambdaElementModifier.cs" />
     <Compile Include="Tags\PartialTagActionExpression.cs" />
     <Compile Include="Tags\PartialTagFactory.cs" />

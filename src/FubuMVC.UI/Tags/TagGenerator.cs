@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using FubuCore;
 using FubuCore.Reflection;
 using FubuMVC.UI.Configuration;
+using FubuMVC.UI.Forms;
 using HtmlTags;
 using Microsoft.Practices.ServiceLocation;
 
@@ -18,6 +19,7 @@ namespace FubuMVC.UI.Tags
         string ElementPrefix { get; set; }
         string CurrentProfile { get; }
         ElementRequest GetRequest(Accessor accessor);
+
         HtmlTag BeforePartial(ElementRequest request);
         HtmlTag AfterPartial(ElementRequest request);
         HtmlTag AfterEachofPartial(ElementRequest request, int current, int count);
@@ -37,6 +39,7 @@ namespace FubuMVC.UI.Tags
         ElementRequest GetRequest(Expression<Func<T, object>> expression);
         ElementRequest GetRequest<TProperty>(Expression<Func<T, TProperty>> expression);
         T Model { get; set; }
+        ILabelAndFieldLayout NewFieldLayout();
     }
 
     public class TagGenerator<T> : ITagGenerator<T> where T : class
@@ -45,18 +48,16 @@ namespace FubuMVC.UI.Tags
         private T _model;
         private readonly IElementNamingConvention _namingConvention;
         private readonly IServiceLocator _services;
-        private readonly Stringifier _stringifier;
         private TagProfile _profile;
 
 
-        public TagGenerator(TagProfileLibrary library, IElementNamingConvention namingConvention, IServiceLocator services, Stringifier stringifier)
+        public TagGenerator(TagProfileLibrary library, IElementNamingConvention namingConvention, IServiceLocator services)
         {
             ElementPrefix = string.Empty;
             
             _library = library;
             _namingConvention = namingConvention;
             _services = services;
-            _stringifier = stringifier;
 
             _profile = _library.DefaultProfile;
         }
@@ -103,7 +104,7 @@ namespace FubuMVC.UI.Tags
 
         public ElementRequest GetRequest(Accessor accessor)
         {
-            var request = new ElementRequest(_model, accessor, _services, _stringifier);
+            var request = new ElementRequest(_model, accessor, _services);
             determineElementName(request);
             return request;
         }
@@ -131,7 +132,7 @@ namespace FubuMVC.UI.Tags
         public ElementRequest GetRequest<TProperty>(Expression<Func<T, TProperty>> expression)
         {
             Accessor accessor = ReflectionHelper.GetAccessor(expression);
-            var request = new ElementRequest(_model, accessor, _services, _stringifier);
+            var request = new ElementRequest(_model, accessor, _services);
             determineElementName(request);
             return request;
         }
@@ -143,6 +144,11 @@ namespace FubuMVC.UI.Tags
 
             var prefix = ElementPrefix ?? string.Empty;
             request.ElementId = prefix + _namingConvention.GetName(typeof(T), request.Accessor);
+        }
+
+        public ILabelAndFieldLayout NewFieldLayout()
+        {
+            return _profile.NewLabelAndFieldLayout();
         }
 
         public HtmlTag LabelFor(ElementRequest request)

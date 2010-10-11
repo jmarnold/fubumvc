@@ -1,26 +1,17 @@
 using System;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Reflection;
 using FubuCore;
-using FubuCore.Binding;
 using FubuCore.Reflection;
-using FubuMVC.Core.Configuration;
-using FubuMVC.Core.Behaviors;
 using FubuMVC.Core.Diagnostics;
 using FubuMVC.Core.Registration;
 using FubuMVC.Core.Registration.Conventions;
 using FubuMVC.Core.Registration.DSL;
-using FubuMVC.Core.Runtime;
-using FubuMVC.Core.Security;
-using FubuMVC.Core.SessionState;
-using FubuMVC.Core.Urls;
-using FubuMVC.Core.View;
 using FubuMVC.Core.View.WebForms;
-using FubuMVC.Core.Web.Security;
 
 namespace FubuMVC.Core
 {
+    [Obsolete("Should probably dump this in favor of the IFubuRegistryExtension")]
     public interface IRegistryModification
     {
         void Modify(FubuRegistry registry);
@@ -28,16 +19,47 @@ namespace FubuMVC.Core
 
     public partial class FubuRegistry
     {
-        public RouteConventionExpression Routes { get { return new RouteConventionExpression(_routeResolver, this); } }
-        public OutputDeterminationExpression Output { get { return new OutputDeterminationExpression(this); } }
-        public ViewExpression Views { get { return new ViewExpression(_viewAttacher); } }
+        private readonly TypeResolver _typeResolver = new TypeResolver();
 
-        public UrlRegistryExpression UrlRegistry { get { return new UrlRegistryExpression(convention => _urlConventions.Add(convention), _urls); } }
-        public PoliciesExpression Policies { get { return new PoliciesExpression(_policies); } }
+        public RouteConventionExpression Routes
+        {
+            get { return new RouteConventionExpression(_routeResolver, this); }
+        }
 
-        public ModelsExpression Models { get { return new ModelsExpression(addExplicit); } }
-        public AppliesToExpression Applies { get { return new AppliesToExpression(_types); } }
-        public ActionCallCandidateExpression Actions { get { return new ActionCallCandidateExpression(_behaviorMatcher, _types, _actionSourceMatcher); } }
+        public OutputDeterminationExpression Output
+        {
+            get { return new OutputDeterminationExpression(this); }
+        }
+
+        public ViewExpression Views
+        {
+            get { return new ViewExpression(_viewAttacher); }
+        }
+
+        public PoliciesExpression Policies
+        {
+            get { return new PoliciesExpression(_policies, _systemPolicies); }
+        }
+
+        public ModelsExpression Models
+        {
+            get { return new ModelsExpression(addExplicit); }
+        }
+
+        public AppliesToExpression Applies
+        {
+            get { return new AppliesToExpression(_types); }
+        }
+
+        public ActionCallCandidateExpression Actions
+        {
+            get { return new ActionCallCandidateExpression(_behaviorMatcher, _types, _actionSourceMatcher); }
+        }
+
+        public TypeResolver TypeResolver
+        {
+            get { return _typeResolver; }
+        }
 
         public void UsingObserver(IConfigurationObserver observer)
         {
@@ -64,7 +86,7 @@ namespace FubuMVC.Core
 
         public void HomeIs<TController>(Expression<Action<TController>> controllerAction)
         {
-            MethodInfo method = ReflectionHelper.GetMethod(controllerAction);
+            var method = ReflectionHelper.GetMethod(controllerAction);
             _routeResolver.RegisterUrlPolicy(new DefaultRouteMethodBasedUrlPolicy(method));
         }
 
@@ -105,8 +127,7 @@ namespace FubuMVC.Core
 
         public void Import(FubuRegistry registry, string prefix)
         {
-            _imports.Add(new RegistryImport
-            {
+            _imports.Add(new RegistryImport{
                 Prefix = prefix,
                 Registry = registry
             });
@@ -135,40 +156,15 @@ namespace FubuMVC.Core
             registration(expression);
         }
 
-        private void setupServices(BehaviorGraph graph)
+
+        /// <summary>
+        ///   This allows you to drop down to direct manipulation of the BehaviorGraph
+        ///   produced by this FubuRegistry
+        /// </summary>
+        /// <param name = "alteration"></param>
+        public void Configure(Action<BehaviorGraph> alteration)
         {
-            graph.Services.AddService<IUrlRegistry>(_urls);
-            graph.Services.AddService<IUrlRegistration>(_urls);
-            graph.Services.AddService(new TypeDescriptorCache());
-
-            graph.Services.SetServiceIfNone<IOutputWriter, HttpResponseOutputWriter>();
-            graph.Services.SetServiceIfNone<IJsonWriter, JsonWriter>();
-            graph.Services.SetServiceIfNone<ISecurityContext, WebSecurityContext>();
-            graph.Services.SetServiceIfNone<IAuthenticationContext, WebAuthenticationContext>();
-            graph.Services.SetServiceIfNone<IFlash, FlashProvider>();
-            graph.Services.SetServiceIfNone<IRequestDataProvider, RequestDataProvider>();
-            graph.Services.SetServiceIfNone<IWebFormRenderer, WebFormRenderer>();
-            graph.Services.SetServiceIfNone<IWebFormsControlBuilder, WebFormsControlBuilder>();
-            graph.Services.SetServiceIfNone<IFubuRequest, FubuRequest>();
-            graph.Services.SetServiceIfNone<IValueConverterRegistry, ValueConverterRegistry>();
-            graph.Services.SetServiceIfNone<IPartialFactory, PartialFactory>();
-            graph.Services.SetServiceIfNone<IPartialRenderer, PartialRenderer>();
-            graph.Services.SetServiceIfNone<IObjectResolver, ObjectResolver>();
-            graph.Services.SetServiceIfNone<IRequestData, RequestData>();
-            graph.Services.SetServiceIfNone<IViewActivator, NulloViewActivator>();
-            graph.Services.SetServiceIfNone<IBindingContext, BindingContext>();
-            graph.Services.SetServiceIfNone<ISettingsProvider, AppSettingsProvider>();
-            graph.Services.SetServiceIfNone<IPropertyBinderCache, PropertyBinderCache>();
-            graph.Services.SetServiceIfNone<IModelBinderCache, ModelBinderCache>();
-            graph.Services.SetServiceIfNone<IDisplayFormatter, DisplayFormatter>();
-
-            graph.Services.SetServiceIfNone<ITypeDescriptorCache, TypeDescriptorCache>();
-            graph.Services.SetServiceIfNone(_partialViewTypes);
-
-            graph.Services.SetServiceIfNone<IStreamingData, StreamingData>();
-            graph.Services.SetServiceIfNone<IJsonReader, JavaScriptJsonReader>();
-
-            graph.Services.SetServiceIfNone<ISessionState, SimpleSessionState>();
+            addExplicit(alteration);
         }
 
         #region Nested type: RegistryImport

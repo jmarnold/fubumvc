@@ -12,6 +12,7 @@
     <AssemblyName>FubuMVC.Core</AssemblyName>
     <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -21,7 +22,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -30,6 +32,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
@@ -72,8 +75,10 @@
     <Compile Include="Continuations\FubuContinuation.cs" />
     <Compile Include="Continuations\ContinuationType.cs" />
     <Compile Include="Continuations\IContinuationDirector.cs" />
+    <Compile Include="Diagnostics\AuthorizationWriter.cs" />
     <Compile Include="Diagnostics\DiagnosticHtml.cs" />
     <Compile Include="Diagnostics\DiagnosticsActionAttribute.cs" />
+    <Compile Include="Diagnostics\HtmlWriting\AuthorizationRulesColumn.cs" />
     <Compile Include="Diagnostics\HtmlWriting\ChainColumn.cs" />
     <Compile Include="Diagnostics\HtmlWriting\DebugReportTagWriter.cs" />
     <Compile Include="Diagnostics\HtmlWriting\DebugWriter.cs" />
@@ -117,16 +122,21 @@
     <Compile Include="Diagnostics\TextWriting\TextLine.cs" />
     <Compile Include="Diagnostics\TextWriting\TextReportWriter.cs" />
     <Compile Include="Diagnostics\TimedReport.cs" />
+    <Compile Include="EndpointService.cs" />
+    <Compile Include="FubuRegistry.DefaultConventions.cs" />
+    <Compile Include="FubuRegistry.DefaultServices.cs" />
     <Compile Include="OutputDeterminationExpression.cs" />
+    <Compile Include="Registration\Conventions\AuthorizationAttributeConvention.cs" />
     <Compile Include="Registration\Conventions\ContinuationHandlerConvention.cs" />
     <Compile Include="Registration\Conventions\DefaultRouteInputTypeBasedUrlPolicy.cs" />
     <Compile Include="Registration\Conventions\DefaultRouteMethodBasedUrlPolicy.cs" />
     <Compile Include="Registration\Conventions\FubuPartialRequestUrlPolicy.cs" />
     <Compile Include="Registration\Conventions\JsonMessageInputConvention.cs" />
-    <Compile Include="Registration\Conventions\NulloRouteDefinition.cs" />
+    <Compile Include="Registration\Conventions\ReorderBehaviorsPolicy.cs" />
     <Compile Include="Registration\Conventions\RouteConstraintPolicy.cs" />
     <Compile Include="Registration\Conventions\UrlForNewConvention.cs" />
     <Compile Include="Registration\Conventions\UrlRegistryCategoryConvention.cs" />
+    <Compile Include="Registration\Conventions\WrapWithAttributeConvention.cs" />
     <Compile Include="Registration\DSL\ModelsExpression.cs" />
     <Compile Include="Registration\DSL\PoliciesExpression.cs" />
     <Compile Include="Registration\Conventions\ActionCallModification.cs" />
@@ -162,12 +172,17 @@
     <Compile Include="Registration\IBehaviorVisitor.cs" />
     <Compile Include="Registration\IRouteVisitor.cs" />
     <Compile Include="Registration\IServiceRegistry.cs" />
-    <Compile Include="Registration\IUrlRegistrationConvention.cs" />
     <Compile Include="Registration\Nodes\ContinuationNode.cs" />
     <Compile Include="Registration\Nodes\DeserializeJsonNode.cs" />
     <Compile Include="Registration\Nodes\OutputNode.cs" />
     <Compile Include="Registration\Nodes\RenderTextNode.cs" />
+    <Compile Include="Registration\Nodes\UrlCategory.cs" />
     <Compile Include="Registration\Nodes\WebFormView.cs" />
+    <Compile Include="Registration\ObjectGraph\ListDependency.cs" />
+    <Compile Include="Registration\Querying\ChainResolver.cs" />
+    <Compile Include="Registration\Querying\ChainForwarder.cs" />
+    <Compile Include="Registration\Querying\IChainResolver.cs" />
+    <Compile Include="Registration\Routes\NulloRouteDefinition.cs" />
     <Compile Include="Registration\RouteVisitor.cs" />
     <Compile Include="Registration\ServiceRegistry.cs" />
     <Compile Include="Registration\TypePool.cs" />
@@ -179,12 +194,27 @@
     <Compile Include="Runtime\ISessionState.cs" />
     <Compile Include="Runtime\IStreamingData.cs" />
     <Compile Include="Runtime\IJsonWriter.cs" />
-    <Compile Include="Registration\DSL\UrlRegistryExpression.cs" />
+    <Compile Include="Security\AllowRole.cs" />
+    <Compile Include="Security\AttachAuthorizationPolicy.cs" />
+    <Compile Include="Security\AuthorizationBehavior.cs" />
+    <Compile Include="Security\AuthorizationNode.cs" />
+    <Compile Include="Security\AuthorizationPolicy.cs" />
+    <Compile Include="Security\AuthorizationRight.cs" />
+    <Compile Include="Security\AuthorizedByAttribute.cs" />
+    <Compile Include="Security\DefaultAuthorizationFailureHandler.cs" />
+    <Compile Include="Security\EndPointAuthorizor.cs" />
+    <Compile Include="Security\EndPointAuthorizorFactory.cs" />
+    <Compile Include="Security\AuthorizationPreviewService.cs" />
+    <Compile Include="Security\IAuthorizationFailureHandler.cs" />
+    <Compile Include="Security\IAuthorizationPolicy.cs" />
+    <Compile Include="Security\IAuthorizationPreviewService.cs" />
+    <Compile Include="Security\IAuthorizationRule.cs" />
+    <Compile Include="Security\IEndPointAuthorizor.cs" />
+    <Compile Include="Security\IEndPointAuthorizorFactory.cs" />
+    <Compile Include="Security\PrincipalRoles.cs" />
     <Compile Include="Urls\ActionUrl.cs" />
-    <Compile Include="Urls\IModelUrl.cs" />
-    <Compile Include="Urls\IUrlRegistration.cs" />
+    <Compile Include="Registration\Querying\ChainInterrogator.cs" />
     <Compile Include="Urls\UrlRegistry.cs" />
-    <Compile Include="Urls\UrlRegistryBuilder.cs" />
     <Compile Include="Registration\Nodes\BehaviorChain.cs" />
     <Compile Include="Registration\Nodes\BehaviorExtensions.cs" />
     <Compile Include="Registration\BehaviorGraph.cs" />

@@ -1,4 +1,6 @@
-﻿using System;
+﻿using FubuMVC.Core.Registration.Nodes;
+using Spark;
+using System;
 using System.Collections.Generic;
 using System.Configuration;
 using System.IO;
@@ -6,12 +8,13 @@ using System.Linq;
 using System.Reflection;
 using System.Threading;
 using System.Web;
-using System.Web.Routing;
 using Spark.Compiler;
 using Spark.FileSystem;
 using Spark.Web.FubuMVC.Extensions;
 using Spark.Web.FubuMVC.ViewCreation;
 using Spark.Web.FubuMVC.ViewLocation;
+using Microsoft.Practices.ServiceLocation;
+using FubuMVC.Core.View;
 
 namespace Spark.Web.FubuMVC
 {
@@ -21,14 +24,12 @@ namespace Spark.Web.FubuMVC
         private ICacheServiceProvider _cacheServiceProvider;
         private IDescriptorBuilder _descriptorBuilder;
         private ISparkViewEngine _engine;
+        private IServiceLocator _serviceLocator;
 
-        public SparkViewFactory() : this(null)
-        {
-        }
-
-        public SparkViewFactory(ISparkSettings settings)
+        public SparkViewFactory(ISparkSettings settings, IServiceLocator serviceLocator)
         {
             Settings = settings ?? (ISparkSettings) ConfigurationManager.GetSection("spark") ?? new SparkSettings();
+            _serviceLocator = serviceLocator;
         }
 
         public IViewFolder ViewFolder
@@ -85,14 +86,10 @@ namespace Spark.Web.FubuMVC
 
         public SparkViewDescriptor CreateDescriptor(ActionContext actionContext, string viewName, string masterName, bool findDefaultMaster, ICollection<string> searchedLocations)
         {
-            string targetNamespace = actionContext.ActionNamespace;
-
-            string actionName = actionContext.RouteData.GetRequiredString("controller");
-
             return DescriptorBuilder.BuildDescriptor(
                 new BuildDescriptorParams(
-                    targetNamespace,
-                    actionName,
+                    actionContext.ActionNamespace,
+                    actionContext.ActionName,
                     viewName,
                     masterName,
                     findDefaultMaster,
@@ -100,24 +97,23 @@ namespace Spark.Web.FubuMVC
                 searchedLocations);
         }
 
-        public Assembly Precompile(SparkBatchDescriptor batch)
+        public Assembly Precompile(SparkBatchDescriptor batch, string viewLocatorName)
         {
-            return Engine.BatchCompilation(batch.OutputAssembly, CreateDescriptors(batch));
+            return Engine.BatchCompilation(batch.OutputAssembly, CreateDescriptors(batch, viewLocatorName));
         }
 
-        public List<SparkViewDescriptor> CreateDescriptors(SparkBatchDescriptor batch)
+        public List<SparkViewDescriptor> CreateDescriptors(SparkBatchDescriptor batch, string viewLocatorName)
         {
             var descriptors = new List<SparkViewDescriptor>();
             foreach (SparkBatchEntry entry in batch.Entries)
-                descriptors.AddRange(CreateDescriptors(entry));
+                descriptors.AddRange(CreateDescriptors(entry, viewLocatorName)); 
             return descriptors;
         }
 
-        public IList<SparkViewDescriptor> CreateDescriptors(SparkBatchEntry entry)
+        public IList<SparkViewDescriptor> CreateDescriptors(SparkBatchEntry entry, string viewLocatorName)
         {
+            string actionName = viewLocatorName;
             var descriptors = new List<SparkViewDescriptor>();
-
-            string controllerName = entry.ControllerType.Name.RemoveSuffix("Controller");
 
             var viewNames = new List<string>();
             IList<string> includeViews = entry.IncludeViews;
@@ -128,7 +124,7 @@ namespace Spark.Web.FubuMVC
             {
                 if (include.EndsWith("*"))
                 {
-                    foreach (string fileName in ViewFolder.ListViews(controllerName))
+                    foreach (string fileName in ViewFolder.ListViews(actionName))
                     {
                         if (!string.Equals(Path.GetExtension(fileName), ".spark", StringComparison.InvariantCultureIgnoreCase))
                             continue;
@@ -163,7 +159,7 @@ namespace Spark.Web.FubuMVC
                 {
                     descriptors.Add(CreateDescriptor(
                                         entry.ControllerType.Namespace,
-                                        controllerName,
+                                        actionName,
                                         viewName,
                                         null /*masterName*/,
                                         true));
@@ -174,7 +170,7 @@ namespace Spark.Web.FubuMVC
                     {
                         descriptors.Add(CreateDescriptor(
                                             entry.ControllerType.Namespace,
-                                            controllerName,
+                                            actionName,
                                             viewName,
                                             string.Join(" ", masterName.ToArray()),
                                             false));
@@ -185,13 +181,13 @@ namespace Spark.Web.FubuMVC
             return descriptors;
         }
 
-        public SparkViewDescriptor CreateDescriptor(string targetNamespace, string controllerName, string viewName, string masterName, bool findDefaultMaster)
+        public SparkViewDescriptor CreateDescriptor(string targetNamespace, string actionName, string viewName, string masterName, bool findDefaultMaster)
         {
             var searchedLocations = new List<string>();
             SparkViewDescriptor descriptor = DescriptorBuilder.BuildDescriptor(
                 new BuildDescriptorParams(
                     targetNamespace /*areaName*/,
-                    controllerName,
+                    actionName,
                     viewName,
                     masterName,
                     findDefaultMaster, null),
@@ -214,6 +210,10 @@ namespace Spark.Web.FubuMVC
                 sparkView.ResourcePathManager = Engine.ResourcePathManager;
                 sparkView.CacheService = CacheServiceProvider.GetCacheService(httpContext);
             }
+            var page = view as IFubuPage;
+            if (page != null)
+                page.ServiceLocator = _serviceLocator;
+
             return new ViewEngineResult(view, this);
         }
 
@@ -222,19 +222,23 @@ namespace Spark.Web.FubuMVC
             return FindViewInternal(actionContext, viewName, masterName, true, false);
         }
 
-        public ISparkView FindView(HttpContextBase httpContext, string actionNamespace, string actionName, string viewName, string masterName)
-        {
-            var routeData = new RouteData();
-            routeData.Values.Add("controller", actionName.RemoveSuffix("Controller"));
-            var actionContext = new ActionContext(httpContext, routeData, actionNamespace);
-
-            ViewEngineResult viewResult = FindView(actionContext, viewName, masterName);
-            return viewResult.View;
-        }
-
         public virtual ViewEngineResult FindPartialView(ActionContext actionContext, string partialViewName)
         {
             return FindViewInternal(actionContext, partialViewName, null /*masterName*/, false, false);
+        }
+
+        public SparkViewToken GetViewToken(ActionCall call, string actionName, string viewName, LanguageType languageType)
+        {
+            var searchedLocations = new List<string>();
+
+            var descriptorParams = new BuildDescriptorParams("", actionName, viewName, String.Empty, false, null);
+            var descriptor = DescriptorBuilder.BuildDescriptor(descriptorParams, searchedLocations);
+            if (descriptor == null)
+                throw new CompilerException(String.Format(
+                    "View '{0}' could not be found in any of the following locations: {1}", viewName, string.Join(", ", searchedLocations)));
+            descriptor.Language = languageType;
+
+            return new SparkViewToken(call, descriptor, call.Method.Name, viewName);
         }
 
         private ViewEngineResult FindViewInternal(ActionContext actionContext, string viewName, string masterName, bool findDefaultMaster, bool useCache)
@@ -242,11 +246,9 @@ namespace Spark.Web.FubuMVC
             var searchedLocations = new List<string>();
             string targetNamespace = actionContext.ActionNamespace;
 
-            string controllerName = actionContext.RouteData.GetRequiredString("controller");
-
             var descriptorParams = new BuildDescriptorParams(
                 targetNamespace,
-                controllerName,
+                actionContext.ActionName,
                 viewName,
                 masterName,
                 findDefaultMaster,
