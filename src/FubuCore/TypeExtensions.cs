@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 
 namespace FubuCore
 {
@@ -262,6 +263,18 @@ namespace FubuCore
         public static bool IsFloatingPoint(this Type type)
         {
             return type == typeof(decimal) || type == typeof(float) || type == typeof(double);
+        }
+
+
+        public static T CloseAndBuildAs<T>(this Type openType, params Type[] parameterTypes)
+        {
+            var closedType = openType.MakeGenericType(parameterTypes);
+            return (T) Activator.CreateInstance(closedType);
+        }
+
+        public static bool PropertyMatches(this PropertyInfo prop1, PropertyInfo prop2)
+        {
+            return prop1.DeclaringType == prop2.DeclaringType && prop1.Name == prop2.Name;
         }
     }
 }
