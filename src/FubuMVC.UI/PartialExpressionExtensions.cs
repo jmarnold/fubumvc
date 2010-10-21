@@ -141,7 +141,7 @@ namespace FubuMVC.UI
         {
             var renderer = viewPage.Get<IPartialRenderer>();
             return
-                new RenderPartialExpression<TViewModel>(model, viewPage, renderer, viewPage.Tags<TViewModel>()).For(
+                new RenderPartialExpression<TViewModel>(model, viewPage, renderer, viewPage.Tags<TViewModel>(), viewPage.Get<IEndpointService>()).For(
                     model);
         }
 
