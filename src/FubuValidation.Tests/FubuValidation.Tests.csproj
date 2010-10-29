@@ -58,6 +58,7 @@
     <Compile Include="AddressModel.cs" />
     <Compile Include="SimpleModel.cs" />
     <Compile Include="Strategies\AccessorFactory.cs" />
+    <Compile Include="Strategies\when_evaluating_email_fields.cs" />
     <Compile Include="Strategies\when_evaluating_greater_or_equal_to_zero_rule.cs">
       <SubType>Code</SubType>
     </Compile>

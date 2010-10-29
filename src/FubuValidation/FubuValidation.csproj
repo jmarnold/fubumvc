@@ -31,8 +31,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Microsoft.Practices.ServiceLocation, Version=1.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
+    <Reference Include="Microsoft.Practices.ServiceLocation">
       <HintPath>..\..\lib\Common Service Locator\Microsoft.Practices.ServiceLocation.dll</HintPath>
     </Reference>
     <Reference Include="System" />
@@ -67,6 +66,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="CoreExtensions.cs" />
+    <Compile Include="EmailAttribute.cs" />
     <Compile Include="FieldMarkerAttribute.cs" />
     <Compile Include="FieldRule.cs" />
     <Compile Include="GreaterOrEqualToZeroAttribute.cs" />
@@ -81,6 +81,7 @@
     <Compile Include="Notification.cs" />
     <Compile Include="NotificationMessage.cs" />
     <Compile Include="RequiredAttribute.cs" />
+    <Compile Include="Strategies\EmailFieldStrategy.cs" />
     <Compile Include="Strategies\GreaterOrEqualToZeroFieldStrategy.cs">
       <SubType>Code</SubType>
     </Compile>

@@ -8,5 +8,7 @@
         public int GreaterThanZero { get; set; }
         [MaximumStringLength(10)]
         public int NoMoreThanTen { get; set; }
+        [Email]
+        public string Email { get; set; }
     }
 }
