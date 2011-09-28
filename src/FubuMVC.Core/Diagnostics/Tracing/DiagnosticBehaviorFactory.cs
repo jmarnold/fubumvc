@@ -26,6 +26,7 @@ namespace FubuMVC.Core.Diagnostics.Tracing
                 : _container.Get<IOutputWriter>();
 
             var report = _container.Get<IDebugReport>();
+            report.BehaviorId = behaviorId;
             arguments.Set(typeof(IOutputWriter), new RecordingOutputWriter(report, writer));
 
             var behavior = _inner.BuildBehavior(arguments, behaviorId);
